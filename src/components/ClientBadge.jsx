@@ -6,8 +6,8 @@ export default function ClientBadge({ platform }) {
   if (platform !== 'desktop' && platform !== 'web') return null;
   const isPc = platform === 'desktop';
   return (
-    <Tooltip label={isPc ? 'App para Windows' : 'Navegador'}>
-      <span className={`client-badge ${isPc ? 'pc' : 'web'}`} aria-label={isPc ? 'App para Windows' : 'Navegador'}>
+    <Tooltip label={isPc ? 'Desktop' : 'Navegador'}>
+      <span className={`client-badge ${isPc ? 'pc' : 'web'}`} aria-label={isPc ? 'Desktop' : 'Navegador'}>
         {isPc ? <Monitor size={11} strokeWidth={2.2} /> : <Globe size={11} strokeWidth={2.2} />}
       </span>
     </Tooltip>

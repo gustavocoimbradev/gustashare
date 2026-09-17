@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Mic, MicOff, Video, VideoOff, MonitorUp, MonitorX, Share2 } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, MonitorUp, MonitorX, Gamepad2, Share2 } from 'lucide-react';
 import Tooltip from './Tooltip.jsx';
 import InviteModal from './InviteModal.jsx';
+import GamesModal from './GamesModal.jsx';
 import DesktopOnlyDialog from './DesktopOnlyDialog.jsx';
 import { isDesktop } from '../lib/platform.js';
 
@@ -15,6 +16,7 @@ export default function Dock({
   roomCode,
 }) {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [gamesOpen, setGamesOpen] = useState(false);
   const [desktopOnly, setDesktopOnly] = useState(null);
 
   function handleMic() {
@@ -62,6 +64,12 @@ export default function Dock({
           </button>
         </Tooltip>
 
+        <Tooltip label="Jogar online">
+          <button type="button" className="dock-btn" onClick={() => setGamesOpen(true)}>
+            <Gamepad2 size={20} />
+          </button>
+        </Tooltip>
+
         <Tooltip label="Convidar alguém">
           <button type="button" className="dock-btn" onClick={() => setInviteOpen(true)}>
             <Share2 size={20} />
@@ -72,6 +80,7 @@ export default function Dock({
       {inviteOpen && (
         <InviteModal roomCode={roomCode} onClose={() => setInviteOpen(false)} />
       )}
+      {gamesOpen && <GamesModal onClose={() => setGamesOpen(false)} />}
       {desktopOnly && (
         <DesktopOnlyDialog feature={desktopOnly} onClose={() => setDesktopOnly(null)} />
       )}

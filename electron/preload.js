@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('gustashare', {
   minimizeWindow: () => ipcRenderer.send('window:minimize'),
   maximizeWindow: () => ipcRenderer.send('window:maximize'),
   closeWindow: () => ipcRenderer.send('window:close'),
+  openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
   isWindowMaximized: () => ipcRenderer.invoke('window:is-maximized'),
   onWindowMaximized: (callback) => {
     const listener = (_event, value) => callback(value);

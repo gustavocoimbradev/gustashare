@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, desktopCapturer, ipcMain } = require('electron');
+const { app, BrowserWindow, session, desktopCapturer, ipcMain, shell } = require('electron');
 const path = require('path');
 const { checkForUpdate } = require('./updater.js');
 
@@ -140,6 +140,13 @@ function createWindow() {
     { useSystemPicker: true }
   );
 
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https:') || url.startsWith('http:')) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
   if (process.env.NODE_ENV === 'development') {
     win.loadURL('http://localhost:5173');
   } else {
@@ -180,6 +187,11 @@ ipcMain.on('window:close', (event) => {
 
 ipcMain.handle('window:is-maximized', (event) => {
   return BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false;
+});
+
+ipcMain.handle('shell:open-external', (_event, url) => {
+  if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return false;
+  return shell.openExternal(url);
 });
 
 ipcMain.on('window:set-mode', (event, mode) => {

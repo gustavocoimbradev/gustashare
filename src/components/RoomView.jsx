@@ -281,24 +281,14 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
         </div>
       )}
 
-      {isDesktop ? (
-        <TitleBar
-          extra={
-            <button type="button" className="leave-btn" onClick={() => setLeaveOpen(true)}>
-              <LogOut size={15} />
-              Abandonar sala
-            </button>
-          }
-        />
-      ) : (
-        <div className="topbar">
-          <div className="brand">GustaShare</div>
-          <button type="button" className="leave-btn" onClick={() => setLeaveOpen(true)}>
-            <LogOut size={15} />
-            Abandonar sala
-          </button>
-        </div>
-      )}
+      {isDesktop && <TitleBar />}
+      <div className="topbar">
+        <div className="brand">GustaShare</div>
+        <button type="button" className="leave-btn" onClick={() => setLeaveOpen(true)}>
+          <LogOut size={15} />
+          Abandonar sala
+        </button>
+      </div>
 
       {!ready && (
         <div className="connecting-overlay">
