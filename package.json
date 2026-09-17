@@ -1,6 +1,6 @@
 {
   "name": "gustashare",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
   "description": "GustaShare",
   "main": "electron/main.js",
@@ -16,7 +16,7 @@
     "sync-update-server": "node scripts/sync-update-server.js",
     "publish": "git add . && git pull && git commit -m \"publish\" && git push"
   },
-  "dependencies": { 
+  "dependencies": {
     "lucide-react": "^1.47.0",
     "peerjs": "^1.5.4",
     "react": "^18.3.1",
