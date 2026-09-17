@@ -9,6 +9,7 @@ import CameraPositionModal from './CameraPositionModal.jsx';
 import { LogOut } from 'lucide-react';
 import { playJoinSound, playLeaveSound, playChatSound, playMediaOnSound, playMicOnSound, playMicOffSound } from '../lib/sounds.js';
 import { captureWindowNative } from '../lib/nativeCapture.js';
+import { SCREEN_DISPLAY_MEDIA } from '../lib/webrtc.js';
 
 export default function RoomView({ nickname, roomCode, onLeave }) {
   const clientRef = useRef(null);
@@ -127,11 +128,7 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: true,
-        systemAudio: 'include',
-      });
+      const stream = await navigator.mediaDevices.getDisplayMedia(SCREEN_DISPLAY_MEDIA);
       await startShareFromDisplayMedia(stream);
     } catch (err) {
       if (err?.name === 'NotAllowedError' || err?.name === 'AbortError') return;
@@ -156,15 +153,33 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
         const info = await window.gustashare.findCaptureSource?.(videoTrack.label).catch(() => null);
         if (info?.hwnd) {
           try {
-            const capture = await captureWindowNative({ hwnd: info.hwnd, wantsAudio: true });
-            stream.getTracks().forEach((t) => t.stop());
-            nativeCaptureRef.current = capture;
-            clientRef.current.setScreenFromStream(capture.stream);
+            const capture = await captureWindowNative({
+              hwnd: info.hwnd,
+              wantsAudio: true,
+              video: false,
+            });
+            const nativeAudio = capture.stream.getAudioTracks();
+            if (nativeAudio.length) {
+              stream.getAudioTracks().forEach((t) => t.stop());
+            }
+            nativeCaptureRef.current = {
+              stop() {
+                capture.stop();
+              },
+            };
+            const mixed = new MediaStream([...stream.getVideoTracks(), ...(nativeAudio.length ? nativeAudio : stream.getAudioTracks())]);
+            videoTrack.addEventListener('ended', () => {
+              nativeCaptureRef.current?.stop();
+              nativeCaptureRef.current = null;
+              clientRef.current?.setScreen(false);
+              setScreenOn(false);
+            });
+            clientRef.current.setScreenFromStream(mixed);
             setScreenOn(true);
             if (camOn) setPositionPromptOpen(true);
             return;
           } catch (err) {
-            console.error('Captura nativa falhou, usando o stream do picker:', err);
+            console.error('Áudio nativo falhou, usando o stream do picker:', err);
           }
         }
       }

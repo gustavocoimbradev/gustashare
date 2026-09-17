@@ -1,64 +1,71 @@
 import { getAudioContext } from './audioContext.js';
 
-// Transforma a captura nativa (video BGRA cru via canvas, audio PCM cru
-// via Web Audio) num MediaStream normal, pra usar exatamente como
-// qualquer outro stream (RTCPeerConnection não sabe a diferença).
+// Video nativo só como fallback (janela preta no Chromium). O caminho
+// principal é o stream do picker do Windows + áudio WASAPI.
 //
-// video: frame = [width u32 LE][height u32 LE][pixels BGRA8...]
+// video: frame = [width u32 LE][height u32 LE][pixels RGBA8...]
 // audio: chunk = PCM float32 intercalado, stereo, 48kHz
 
-export async function captureWindowNative({ hwnd, wantsAudio }) {
+export async function captureWindowNative({ hwnd, wantsAudio, video: wantVideo = true }) {
   const id = `${hwnd}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  let width = 0;
-  let height = 0;
   let videoStream = null;
   let stopVideo = null;
 
-  await new Promise((resolve, reject) => {
-    let settled = false;
-    const timeout = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        stopVideo?.();
-        reject(new Error('timeout esperando primeiro frame da captura nativa'));
-      }
-    }, 8000);
+  if (wantVideo) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+    let width = 0;
+    let height = 0;
+    let painting = false;
 
-    stopVideo = window.gustashare.startNativeVideoCapture(id, hwnd, (frame) => {
-      const bytes = frame instanceof Uint8Array ? frame : new Uint8Array(frame);
-      const view = new DataView(bytes.buffer, bytes.byteOffset, 8);
-      const w = view.getUint32(0, true);
-      const h = view.getUint32(4, true);
+    videoStream = await new Promise((resolve, reject) => {
+      let settled = false;
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          stopVideo?.();
+          reject(new Error('timeout esperando primeiro frame da captura nativa'));
+        }
+      }, 8000);
 
-      if (w !== width || h !== height) {
-        width = w;
-        height = h;
-        canvas.width = width;
-        canvas.height = height;
-      }
-      if (width === 0 || height === 0) return;
+      stopVideo = window.gustashare.startNativeVideoCapture(id, hwnd, (frame) => {
+        if (painting && settled) return;
+        painting = true;
 
-      const pixelCount = width * height * 4;
-      const pixels = new Uint8ClampedArray(bytes.buffer.slice(bytes.byteOffset + 8, bytes.byteOffset + 8 + pixelCount));
-      // BGRA -> RGBA
-      for (let i = 0; i < pixels.length; i += 4) {
-        const b = pixels[i];
-        pixels[i] = pixels[i + 2];
-        pixels[i + 2] = b;
-      }
-      ctx.putImageData(new ImageData(pixels, width, height), 0, 0);
+        const bytes = frame instanceof Uint8Array ? frame : new Uint8Array(frame);
+        const view = new DataView(bytes.buffer, bytes.byteOffset, 8);
+        const w = view.getUint32(0, true);
+        const h = view.getUint32(4, true);
+        if (w === 0 || h === 0) {
+          painting = false;
+          return;
+        }
 
-      if (!settled) {
-        settled = true;
-        clearTimeout(timeout);
-        videoStream = canvas.captureStream(30);
-        resolve();
-      }
+        if (w !== width || h !== height) {
+          width = w;
+          height = h;
+          canvas.width = width;
+          canvas.height = height;
+        }
+
+        const pixelCount = width * height * 4;
+        if (bytes.byteLength < 8 + pixelCount) {
+          painting = false;
+          return;
+        }
+        const pixels = Uint8ClampedArray.from(bytes.subarray(8, 8 + pixelCount));
+        ctx.putImageData(new ImageData(pixels, width, height), 0, 0);
+
+        if (!settled) {
+          settled = true;
+          clearTimeout(timeout);
+          resolve(canvas.captureStream(30));
+        }
+        painting = false;
+      });
     });
-  });
+  }
 
   let stopAudio = null;
   let audioDestination = null;
@@ -91,14 +98,10 @@ export async function captureWindowNative({ hwnd, wantsAudio }) {
     }
   }
 
-  const tracks = [...videoStream.getVideoTracks()];
+  const tracks = [];
+  if (videoStream) tracks.push(...videoStream.getVideoTracks());
   if (audioDestination) tracks.push(...audioDestination.stream.getAudioTracks());
   const stream = new MediaStream(tracks);
-
-  stream.addEventListener('gustashare-stop', () => {
-    stopVideo?.();
-    stopAudio?.();
-  });
 
   return {
     stream,

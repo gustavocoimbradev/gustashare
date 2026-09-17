@@ -29,6 +29,55 @@ use windows_capture::{
 
 type FrameCallback = ThreadsafeFunction<Buffer, ErrorStrategy::CalleeHandled>;
 
+const MAX_WIDTH: u32 = 1920;
+
+fn pack_rgba_frame(raw: &[u8], width: u32, height: u32) -> Vec<u8> {
+    if width == 0 || height == 0 || raw.len() < 4 {
+        let mut out = vec![0u8; 8];
+        out[0..4].copy_from_slice(&0u32.to_le_bytes());
+        out[4..8].copy_from_slice(&0u32.to_le_bytes());
+        return out;
+    }
+
+    let stride = (raw.len() / height as usize).max(width as usize * 4);
+    let scale = if width > MAX_WIDTH {
+        MAX_WIDTH as f32 / width as f32
+    } else {
+        1.0
+    };
+    let nw = ((width as f32 * scale) as u32).max(2) & !1;
+    let nh = ((height as f32 * scale) as u32).max(2) & !1;
+    let mut out = vec![0u8; 8 + (nw as usize * nh as usize * 4)];
+    out[0..4].copy_from_slice(&nw.to_le_bytes());
+    out[4..8].copy_from_slice(&nh.to_le_bytes());
+    let dst = &mut out[8..];
+
+    if nw == width && nh == height && stride == width as usize * 4 {
+        for (i, px) in raw.chunks_exact(4).enumerate() {
+            let o = i * 4;
+            dst[o] = px[2];
+            dst[o + 1] = px[1];
+            dst[o + 2] = px[0];
+            dst[o + 3] = px[3];
+        }
+        return out;
+    }
+
+    for y in 0..nh {
+        let sy = ((y as f32 / scale) as u32).min(height - 1);
+        for x in 0..nw {
+            let sx = ((x as f32 * width as f32 / nw as f32) as u32).min(width - 1);
+            let si = sy as usize * stride + sx as usize * 4;
+            let di = (y as usize * nw as usize + x as usize) * 4;
+            dst[di] = raw[si + 2];
+            dst[di + 1] = raw[si + 1];
+            dst[di + 2] = raw[si];
+            dst[di + 3] = raw[si + 3];
+        }
+    }
+    out
+}
+
 struct Capturer {
     stop_flag: Arc<AtomicBool>,
     callback: FrameCallback,
@@ -58,12 +107,7 @@ impl GraphicsCaptureApiHandler for Capturer {
         let mut buffer = frame.buffer()?;
         let raw = buffer.as_raw_buffer();
 
-        // Prefixa o buffer com width/height (u32 little-endian) pra não
-        // precisar de uma segunda mensagem/IPC só pra dimensão do frame.
-        let mut out = Vec::with_capacity(8 + raw.len());
-        out.extend_from_slice(&width.to_le_bytes());
-        out.extend_from_slice(&height.to_le_bytes());
-        out.extend_from_slice(raw);
+        const mut out = pack_rgba_frame(raw, width, height);
 
         self.callback
             .call(Ok(out.into()), ThreadsafeFunctionCallMode::NonBlocking);

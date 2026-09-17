@@ -1,5 +1,6 @@
 import Peer from 'peerjs';
 import { isDesktop } from './platform.js';
+import { PEER_OPTIONS, prepareScreenTrack, tuneScreenSender } from './webrtc.js';
 
 const HOST_PREFIX = 'gsh1_';
 
@@ -50,7 +51,7 @@ export default class RoomClient extends EventTarget {
 
   _becomeHostOrJoin() {
     return new Promise((resolve) => {
-      const hostPeer = new Peer(this.hostId);
+      const hostPeer = new Peer(this.hostId, PEER_OPTIONS);
       let settled = false;
 
       hostPeer.on('open', () => {
@@ -75,7 +76,7 @@ export default class RoomClient extends EventTarget {
 
   _joinAsMember() {
     return new Promise((resolve) => {
-      const peer = new Peer();
+      const peer = new Peer(PEER_OPTIONS);
       peer.on('open', () => {
         this.peer = peer;
         this.isHost = false;
@@ -239,9 +240,16 @@ export default class RoomClient extends EventTarget {
   }
 
   _callPeer(peerId, type, stream) {
+    if (type === 'screen') prepareScreenTrack(stream);
     const call = this.peer.call(peerId, stream, { metadata: { type } });
     if (!call) return;
     this.outgoingCalls.set(`${peerId}:${type}`, call);
+    if (type === 'screen') {
+      const tune = () => tuneScreenSender(call);
+      queueMicrotask(tune);
+      setTimeout(tune, 250);
+      setTimeout(tune, 1200);
+    }
   }
 
   // ----- Reeleicao de host -----
@@ -259,7 +267,7 @@ export default class RoomClient extends EventTarget {
   _tryBecomeHost(attempt = 0) {
     if (this.stopped) return;
     this.peer.destroy();
-    const hostPeer = new Peer(this.hostId);
+    const hostPeer = new Peer(this.hostId, PEER_OPTIONS);
     hostPeer.on('open', () => {
       this.peer = hostPeer;
       this.isHost = true;
@@ -277,7 +285,7 @@ export default class RoomClient extends EventTarget {
 
   _retryJoin() {
     if (this.stopped) return;
-    const peer = new Peer();
+    const peer = new Peer(PEER_OPTIONS);
     peer.on('open', () => {
       this.peer = peer;
       this.isHost = false;
@@ -306,6 +314,7 @@ export default class RoomClient extends EventTarget {
   // Usado quando a tela veio da captura nativa (native/gustashare-capture)
   // em vez de getDisplayMedia — o stream já chega pronto.
   setScreenFromStream(stream) {
+    prepareScreenTrack(stream);
     this._setLocalStream('screen', stream);
   }
 
@@ -320,7 +329,15 @@ export default class RoomClient extends EventTarget {
     }
     if (on) {
       const wantsAudio = !!(choice && choice.shareAudio);
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: wantsAudio });
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          frameRate: { ideal: 30, max: 60 },
+          width: { ideal: 1920, max: 1920 },
+          height: { ideal: 1080, max: 1080 },
+        },
+        audio: wantsAudio,
+      });
+      prepareScreenTrack(stream);
       stream.getVideoTracks()[0].addEventListener('ended', () => this.setScreen(false));
       this._setLocalStream('screen', stream);
     } else {
