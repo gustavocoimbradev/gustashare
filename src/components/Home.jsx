@@ -51,11 +51,9 @@ export default function Home({ onJoin, invite }) {
           />
         )}
         <button type="submit">Entrar</button>
-        <p className="hint">
-          {invite?.roomCode
-            ? 'Entre com um nickname para assistir e usar o chat.'
-            : 'Se a sala não existir, ela é criada na hora.'}
-        </p>
+        {invite?.roomCode && (
+          <p className="hint">Entre com um nickname para assistir e usar o chat.</p>
+        )}
         {!isDesktop && (
           <a className="home-download" href={DESKTOP_DOWNLOAD_URL}>
             <Download size={14} />
