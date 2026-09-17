@@ -1,4 +1,5 @@
 import React from 'react';
+import { X } from 'lucide-react';
 import useSpeaking from '../lib/useSpeaking.js';
 import { userColorStyle } from '../lib/userColor.js';
 import ClientBadge from './ClientBadge.jsx';
@@ -23,10 +24,15 @@ function ParticipantRow({ nickname, isSelf, userId, platform, micStream }) {
   );
 }
 
-export default function ParticipantsSidebar({ roster, selfId, streams, selfStreams }) {
+export default function ParticipantsSidebar({ roster, selfId, streams, selfStreams, className, onClose }) {
   return (
-    <div className="participants">
-      <div className="participants-title">Na sala — {roster.length}</div>
+    <div className={`participants ${className || ''}`}>
+      <div className="participants-title">
+        Na sala — {roster.length}
+        <button type="button" className="sheet-close" onClick={onClose} aria-label="Fechar">
+          <X size={18} />
+        </button>
+      </div>
       <div className="participants-list">
         {roster.map((m) => {
           const isSelf = m.id === selfId;

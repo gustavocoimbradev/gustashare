@@ -27,6 +27,7 @@ html,
 body,
 #root {
   height: 100%;
+  height: 100dvh;
   margin: 0;
 }
 
@@ -34,6 +35,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
 }
 
 /* Scrollbars minimalistas (Chromium/Electron) */
@@ -172,6 +174,14 @@ input:focus {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-md);
+}
+
+.home-hero,
+.home-fields,
+.home-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .home-card h1 {
@@ -334,6 +344,10 @@ input:focus {
   padding: 8px 14px;
   min-height: 36px;
   border-radius: var(--radius-sm);
+}
+
+.leave-short {
+  display: none;
 }
 
 .leave-btn:hover {
@@ -721,9 +735,13 @@ input:focus {
   box-shadow: 0 4px 14px rgba(74, 125, 255, 0.4);
 }
 
-.dock-btn.screen.active {
-  background: var(--screen-gradient);
-  box-shadow: 0 4px 14px rgba(236, 73, 153, 0.4);
+.dock-desktop-only,
+.dock-mobile-only {
+  display: inline-flex;
+}
+
+.dock-mobile-only {
+  display: none;
 }
 
 /* Participantes */
@@ -738,12 +756,39 @@ input:focus {
   overflow-y: auto;
 }
 
-.participants-title {
+.participants-title,
+.chat-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 13px 14px;
   font-size: 13px;
   font-weight: 700;
   color: var(--text-dim);
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sheet-close {
+  display: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-dim);
+  align-items: center;
+  justify-content: center;
+}
+
+.sheet-close:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.mobile-sheet-backdrop {
+  display: none;
 }
 
 .participants-list {
@@ -845,14 +890,6 @@ input:focus {
   flex-direction: column;
   background: var(--surface);
   border-left: 1px solid var(--border);
-}
-
-.chat-title {
-  padding: 13px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-dim);
-  border-bottom: 1px solid var(--border);
 }
 
 .chat-messages {
@@ -1349,4 +1386,175 @@ input:focus {
   font-size: 14px;
   font-weight: 700;
   box-shadow: 0 4px 14px rgba(74, 125, 255, 0.35);
+}
+
+@media (hover: none) {
+  .tooltip-bubble {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .home-main {
+    align-items: stretch;
+    justify-content: stretch;
+  }
+
+  .home-card {
+    max-width: none;
+    flex: 1;
+    min-height: 100%;
+    justify-content: space-between;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 32px 22px calc(28px + env(safe-area-inset-bottom, 0px));
+    gap: 28px;
+  }
+
+  .home-card h1 {
+    font-size: 34px;
+    margin: 8vh 0 0;
+  }
+
+  .home-fields input,
+  .home-card input {
+    font-size: 16px;
+    padding: 14px 16px;
+    border-radius: 12px;
+  }
+
+  .home-card button[type='submit'] {
+    width: 100%;
+    min-height: 50px;
+    font-size: 16px;
+    border-radius: 14px;
+  }
+
+  .topbar {
+    padding: 10px 12px;
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  }
+
+  .leave-full {
+    display: none;
+  }
+
+  .leave-short {
+    display: inline;
+  }
+
+  .leave-btn {
+    padding: 7px 12px;
+    min-height: 34px;
+  }
+
+  .room-body {
+    position: relative;
+  }
+
+  .participants,
+  .chat {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: min(78dvh, 640px);
+    z-index: 45;
+    transform: translateY(110%);
+    transition: transform 0.28s ease;
+    border: none;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+  }
+
+  .participants.open,
+  .chat.open {
+    transform: translateY(0);
+  }
+
+  .sheet-close {
+    display: flex;
+  }
+
+  .mobile-sheet-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    background: rgba(6, 7, 10, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .mobile-sheet-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px 10px calc(108px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .tile {
+    aspect-ratio: 16 / 10;
+    min-height: 200px;
+  }
+
+  .dock {
+    position: fixed;
+    left: 50%;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 50;
+    gap: 8px;
+    padding: 8px;
+    max-width: calc(100vw - 16px);
+  }
+
+  .dock-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .dock-desktop-only {
+    display: none;
+  }
+
+  .dock-mobile-only {
+    display: inline-flex;
+  }
+
+  .invite-box,
+  .games-box,
+  .picker {
+    width: calc(100vw - 24px);
+    max-height: min(88dvh, 720px);
+  }
+
+  .games-item {
+    flex-wrap: wrap;
+  }
+
+  .games-item-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .games-item-actions button {
+    flex: 1;
+  }
+
+  .chat-form input {
+    font-size: 16px;
+  }
 }

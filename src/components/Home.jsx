@@ -34,34 +34,40 @@ export default function Home({ onJoin, invite }) {
       {isDesktop && <TitleBar canMaximize={false} />}
       <div className="home-main">
         <form className="home-card" onSubmit={submit}>
-        <h1>GustaShare</h1>
-        {invite?.roomCode ? (
-          <p className="invite-banner">
-            Você foi convidado para a sala <strong>{invite.roomCode}</strong>
-          </p>
-        ) : null}
-        <input
-          placeholder="Seu nickname"
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
-          maxLength={24}
-          autoFocus
-        />
-        {!invite?.roomCode && (
+        <div className="home-hero">
+          <h1>GustaShare</h1>
+          {invite?.roomCode ? (
+            <p className="invite-banner">
+              Você foi convidado para a sala <strong>{invite.roomCode}</strong>
+            </p>
+          ) : null}
+        </div>
+        <div className="home-fields">
           <input
-            placeholder="Código da sala"
-            value={roomCode}
-            onChange={(e) => setRoomCode(e.target.value)}
+            placeholder="Seu nickname"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
             maxLength={24}
+            autoFocus
           />
-        )}
-        <button type="submit">Entrar</button>
-        {!isDesktop && (
-          <a className="home-download" href={DESKTOP_DOWNLOAD_URL}>
-            <Download size={14} />
-            Baixar versão desktop
-          </a>
-        )}
+          {!invite?.roomCode && (
+            <input
+              placeholder="Código da sala"
+              value={roomCode}
+              onChange={(e) => setRoomCode(e.target.value)}
+              maxLength={24}
+            />
+          )}
+        </div>
+        <div className="home-actions">
+          <button type="submit">Entrar</button>
+          {!isDesktop && (
+            <a className="home-download" href={DESKTOP_DOWNLOAD_URL}>
+              <Download size={14} />
+              Baixar versão desktop
+            </a>
+          )}
+        </div>
         </form>
       </div>
     </div>

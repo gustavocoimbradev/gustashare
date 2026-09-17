@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mic, MicOff, Video, VideoOff, MonitorUp, MonitorX, Gamepad2, Share2 } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, MonitorUp, MonitorX, Gamepad2, Share2, Users, MessageCircle } from 'lucide-react';
 import Tooltip from './Tooltip.jsx';
 import InviteModal from './InviteModal.jsx';
 import GamesModal from './GamesModal.jsx';
@@ -14,46 +14,56 @@ export default function Dock({
   roomCode,
   nickname,
   onInviteGame,
+  usersOpen,
+  chatOpen,
+  onToggleUsers,
+  onToggleChat,
 }) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [gamesOpen, setGamesOpen] = useState(false);
-
-  function handleMic() {
-    onToggleMic();
-  }
-
-  function handleCam() {
-    onToggleCam();
-  }
-
-  function handleScreen() {
-    onToggleScreen();
-  }
 
   return (
     <>
       <div className="dock">
         <Tooltip label={micOn ? 'Desligar microfone' : 'Ligar microfone'}>
-          <button type="button" className={`dock-btn ${micOn ? 'active' : ''}`} onClick={handleMic}>
+          <button type="button" className={`dock-btn ${micOn ? 'active' : ''}`} onClick={onToggleMic}>
             {micOn ? <Mic size={20} /> : <MicOff size={20} />}
           </button>
         </Tooltip>
 
         <Tooltip label={camOn ? 'Desligar câmera' : 'Ligar câmera'}>
-          <button type="button" className={`dock-btn ${camOn ? 'active' : ''}`} onClick={handleCam}>
+          <button type="button" className={`dock-btn ${camOn ? 'active' : ''}`} onClick={onToggleCam}>
             {camOn ? <Video size={20} /> : <VideoOff size={20} />}
           </button>
         </Tooltip>
 
-        <Tooltip label={screenOn ? 'Parar compartilhamento' : 'Compartilhar tela'}>
-          <button
-            type="button"
-            className={`dock-btn screen ${screenOn ? 'active' : ''}`}
-            onClick={handleScreen}
-          >
-            {screenOn ? <MonitorX size={20} /> : <MonitorUp size={20} />}
-          </button>
-        </Tooltip>
+        <span className="dock-desktop-only">
+          <Tooltip label={screenOn ? 'Parar compartilhamento' : 'Compartilhar tela'}>
+            <button
+              type="button"
+              className={`dock-btn screen ${screenOn ? 'active' : ''}`}
+              onClick={onToggleScreen}
+            >
+              {screenOn ? <MonitorX size={20} /> : <MonitorUp size={20} />}
+            </button>
+          </Tooltip>
+        </span>
+
+        <span className="dock-mobile-only">
+          <Tooltip label="Na sala">
+            <button type="button" className={`dock-btn ${usersOpen ? 'active' : ''}`} onClick={onToggleUsers}>
+              <Users size={20} />
+            </button>
+          </Tooltip>
+        </span>
+
+        <span className="dock-mobile-only">
+          <Tooltip label="Chat">
+            <button type="button" className={`dock-btn ${chatOpen ? 'active' : ''}`} onClick={onToggleChat}>
+              <MessageCircle size={20} />
+            </button>
+          </Tooltip>
+        </span>
 
         <Tooltip label="Jogar online">
           <button type="button" className="dock-btn" onClick={() => setGamesOpen(true)}>
@@ -61,11 +71,13 @@ export default function Dock({
           </button>
         </Tooltip>
 
-        <Tooltip label="Convidar alguém">
-          <button type="button" className="dock-btn" onClick={() => setInviteOpen(true)}>
-            <Share2 size={20} />
-          </button>
-        </Tooltip>
+        <span className="dock-desktop-only">
+          <Tooltip label="Convidar alguém">
+            <button type="button" className="dock-btn" onClick={() => setInviteOpen(true)}>
+              <Share2 size={20} />
+            </button>
+          </Tooltip>
+        </span>
       </div>
 
       {inviteOpen && (

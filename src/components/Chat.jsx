@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { SendHorizontal } from 'lucide-react';
+import { SendHorizontal, X } from 'lucide-react';
 import { userColorStyle } from '../lib/userColor.js';
 import ClientBadge from './ClientBadge.jsx';
 import { faviconUrl, openGame } from '../lib/games.js';
@@ -33,7 +33,7 @@ function GameInviteText({ game }) {
   );
 }
 
-export default function Chat({ messages, onSend, selfId, roster }) {
+export default function Chat({ messages, onSend, selfId, roster, className, onClose }) {
   const [text, setText] = useState('');
   const listRef = useRef(null);
 
@@ -50,8 +50,13 @@ export default function Chat({ messages, onSend, selfId, roster }) {
   }
 
   return (
-    <div className="chat">
-      <div className="chat-title">Chat</div>
+    <div className={`chat ${className || ''}`}>
+      <div className="chat-title">
+        Chat
+        <button type="button" className="sheet-close" onClick={onClose} aria-label="Fechar">
+          <X size={18} />
+        </button>
+      </div>
       <div className="chat-messages" ref={listRef}>
         {messages.map((m, i) => {
           const isGame = Boolean(m.game?.url);

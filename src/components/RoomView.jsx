@@ -28,6 +28,7 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
   const [positionPromptOpen, setPositionPromptOpen] = useState(false);
   const [screenSources, setScreenSources] = useState(null);
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState(null);
   const nativeCaptureRef = useRef(null);
 
   useEffect(() => {
@@ -250,6 +251,10 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
     });
   }
 
+  function toggleMobilePanel(name) {
+    setMobilePanel((current) => (current === name ? null : name));
+  }
+
   function confirmLeave() {
     nativeCaptureRef.current?.stop();
     nativeCaptureRef.current = null;
@@ -292,7 +297,8 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
         <div className="brand">GustaShare</div>
         <button type="button" className="leave-btn" onClick={() => setLeaveOpen(true)}>
           <LogOut size={15} />
-          Abandonar sala
+          <span className="leave-full">Abandonar sala</span>
+          <span className="leave-short">Sair</span>
         </button>
       </div>
 
@@ -305,8 +311,21 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
         </div>
       )}
 
-      <div className="room-body">
-        <ParticipantsSidebar roster={roster} selfId={selfId} streams={streams} selfStreams={selfStreams} />
+      <div className={`room-body ${mobilePanel ? `panel-${mobilePanel}` : ''}`}>
+        <button
+          type="button"
+          className={`mobile-sheet-backdrop ${mobilePanel ? 'open' : ''}`}
+          aria-label="Fechar painel"
+          onClick={() => setMobilePanel(null)}
+        />
+        <ParticipantsSidebar
+          className={mobilePanel === 'users' ? 'open' : ''}
+          onClose={() => setMobilePanel(null)}
+          roster={roster}
+          selfId={selfId}
+          streams={streams}
+          selfStreams={selfStreams}
+        />
 
         <div className="grid-wrap">
           <div className="grid">
@@ -339,10 +358,21 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
             roomCode={roomCode}
             nickname={nickname}
             onInviteGame={inviteGame}
+            usersOpen={mobilePanel === 'users'}
+            chatOpen={mobilePanel === 'chat'}
+            onToggleUsers={() => toggleMobilePanel('users')}
+            onToggleChat={() => toggleMobilePanel('chat')}
           />
         </div>
 
-        <Chat messages={messages} onSend={sendChat} selfId={selfId} roster={roster} />
+        <Chat
+          className={mobilePanel === 'chat' ? 'open' : ''}
+          onClose={() => setMobilePanel(null)}
+          messages={messages}
+          onSend={sendChat}
+          selfId={selfId}
+          roster={roster}
+        />
       </div>
     </div>
   );
