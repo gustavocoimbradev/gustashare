@@ -16,30 +16,29 @@
 // https://github.com/microsoft/Windows-Classic-Samples -> ApplicationLoopback
 
 use napi::bindgen_prelude::Buffer;
-use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use napi::threadsafe_function::{ErrorStrategy, ThreadsafeFunction, ThreadsafeFunctionCallMode};
 
 use windows::core::{implement, Interface, PCWSTR};
 use windows::Win32::Foundation::{HANDLE, WAIT_OBJECT_0};
 use windows::Win32::Media::Audio::{
-    IAudioCaptureClient, IAudioClient, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-    AUDCLNT_STREAMFLAGS_LOOPBACK, AUDIOCLIENT_ACTIVATION_PARAMS,
-    AUDIOCLIENT_ACTIVATION_PARAMS_0, AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK,
-    AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS, AUDCLNT_SHAREMODE_SHARED, WAVEFORMATEX,
-    WAVE_FORMAT_IEEE_FLOAT, PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE,
     ActivateAudioInterfaceAsync, IActivateAudioInterfaceAsyncOperation,
-    IActivateAudioInterfaceCompletionHandler, IActivateAudioInterfaceCompletionHandler_Impl,
+    IActivateAudioInterfaceCompletionHandler,
+    IAudioCaptureClient, IAudioClient, AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+    AUDCLNT_STREAMFLAGS_LOOPBACK, AUDIOCLIENT_ACTIVATION_PARAMS, AUDIOCLIENT_ACTIVATION_PARAMS_0,
+    AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK, AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS,
+    PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE, WAVEFORMATEX,
 };
-use windows::Win32::System::Com::{
-    CoCreateFreeThreadedMarshaler, CoInitializeEx, COINIT_MULTITHREADED, STGM_READ,
-};
-use windows::Win32::System::Com::StructuredStorage::PROPVARIANT;
-use windows::Win32::System::Threading::{CreateEventW, WaitForSingleObject};
+use windows::Win32::System::Com::CoInitializeEx;
+use windows::Win32::System::Ole::{PROPVARIANT, VT_BLOB};
+use windows::Win32::System::Threading::{CreateEventW, SetEvent, WaitForSingleObject};
 
 const VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK: &str = "VAD\\Process_Loopback";
 const SAMPLE_RATE: u32 = 48000;
 const CHANNELS: u16 = 2;
+// mmreg.h: WAVE_FORMAT_IEEE_FLOAT = 3. Usamos o valor literal em vez de
+// importar a constante — o caminho dela na crate `windows` muda bastante
+// entre versões.
+const WAVE_FORMAT_IEEE_FLOAT: u16 = 3;
 
 #[implement(IActivateAudioInterfaceCompletionHandler)]
 struct CompletionHandler {
@@ -52,21 +51,23 @@ impl IActivateAudioInterfaceCompletionHandler_Impl for CompletionHandler {
         _activate_operation: Option<&IActivateAudioInterfaceAsyncOperation>,
     ) -> windows::core::Result<()> {
         unsafe {
-            let _ = windows::Win32::System::Threading::SetEvent(self.ready);
+            let _ = SetEvent(self.ready);
         }
         Ok(())
     }
 }
 
-type AudioCallback = ThreadsafeFunction<Buffer, napi::ErrorStrategy::CalleeHandled>;
+type AudioCallback = ThreadsafeFunction<Buffer, ErrorStrategy::CalleeHandled>;
 
 pub fn run_capture(
     pid: u32,
-    stop_flag: Arc<AtomicBool>,
+    stop_flag: std::sync::Arc<std::sync::atomic::AtomicBool>,
     callback: AudioCallback,
 ) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    use std::sync::atomic::Ordering;
+
     unsafe {
-        CoInitializeEx(None, COINIT_MULTITHREADED).ok()?;
+        CoInitializeEx(None, windows::Win32::System::Com::COINIT_MULTITHREADED).ok()?;
 
         let mut params = AUDIOCLIENT_ACTIVATION_PARAMS {
             ActivationType: AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK,
@@ -79,9 +80,6 @@ pub fn run_capture(
         };
 
         let mut prop = PROPVARIANT::default();
-        // vt=VT_BLOB apontando pra AUDIOCLIENT_ACTIVATION_PARAMS — monta
-        // manualmente pois a crate `windows` nao tem um helper direto
-        // pra esse caso especifico.
         set_propvariant_blob(&mut prop, &mut params);
 
         let ready_event = CreateEventW(None, true, false, None)?;
@@ -109,18 +107,18 @@ pub fn run_capture(
         let audio_client: IAudioClient = audio_client_unknown.unwrap().cast()?;
 
         let wave_format = WAVEFORMATEX {
-            wFormatTag: WAVE_FORMAT_IEEE_FLOAT as u16,
+            wFormatTag: WAVE_FORMAT_IEEE_FLOAT,
             nChannels: CHANNELS,
             nSamplesPerSec: SAMPLE_RATE,
             wBitsPerSample: 32,
-            nBlockAlign: (CHANNELS * 4) as u16,
+            nBlockAlign: (CHANNELS * 4),
             nAvgBytesPerSec: SAMPLE_RATE * CHANNELS as u32 * 4,
             cbSize: 0,
         };
 
         audio_client.Initialize(
             AUDCLNT_SHAREMODE_SHARED,
-            AUDCLNT_STREAMFLAGS_LOOPBACK.0 as u32 | AUDCLNT_STREAMFLAGS_EVENTCALLBACK.0 as u32,
+            (AUDCLNT_STREAMFLAGS_LOOPBACK.0 as u32) | (AUDCLNT_STREAMFLAGS_EVENTCALLBACK.0 as u32),
             10_000_000, // 1s de buffer, em unidades de 100ns
             0,
             &wave_format,
@@ -175,15 +173,10 @@ pub fn run_capture(
 }
 
 unsafe fn set_propvariant_blob(prop: &mut PROPVARIANT, params: &mut AUDIOCLIENT_ACTIVATION_PARAMS) {
-    // VT_BLOB = 65. A PROPVARIANT da crate `windows` expõe os campos via
-    // union `Anonymous`; isso replica o que o exemplo oficial da
-    // Microsoft (C++) faz manualmente.
-    use windows::Win32::System::Com::StructuredStorage::PROPVARIANT_0_0_0;
-    prop.Anonymous.Anonymous.vt = 65u16; // VT_BLOB
-    let blob = &mut prop.Anonymous.Anonymous.Anonymous;
-    let _ = STGM_READ; // mantém import usado caso a versão precise dele
-    blob.blob.cbSize = std::mem::size_of::<AUDIOCLIENT_ACTIVATION_PARAMS>() as u32;
-    blob.blob.pBlobData = params as *mut _ as *mut u8;
-    let _: &PROPVARIANT_0_0_0 = &prop.Anonymous.Anonymous;
-    let _ = CoCreateFreeThreadedMarshaler; // idem
+    // VT_BLOB apontando pra AUDIOCLIENT_ACTIVATION_PARAMS — replica o que
+    // o exemplo oficial da Microsoft (C++) faz manualmente.
+    prop.Anonymous.Anonymous.vt = VT_BLOB.0 as u16;
+    let blob = &mut prop.Anonymous.Anonymous.Anonymous.blob;
+    blob.cbSize = std::mem::size_of::<AUDIOCLIENT_ACTIVATION_PARAMS>() as u32;
+    blob.pBlobData = params as *mut _ as *mut u8;
 }

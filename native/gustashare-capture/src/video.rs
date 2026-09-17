@@ -8,8 +8,8 @@
 // versao instalada (`cargo tree -p windows-capture`) e ajustar.
 
 use napi::bindgen_prelude::Buffer;
-use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
-use napi::{Error, ErrorStrategy, Result};
+use napi::threadsafe_function::{ErrorStrategy, ThreadsafeFunction, ThreadsafeFunctionCallMode};
+use napi::{Error, Result};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
