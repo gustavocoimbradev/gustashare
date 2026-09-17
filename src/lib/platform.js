@@ -11,7 +11,6 @@ export function parseInviteFromUrl() {
   if (!match) return null;
   return {
     roomCode: decodeURIComponent(match[1]),
-    from: new URLSearchParams(window.location.search).get('from') || '',
   };
 }
 

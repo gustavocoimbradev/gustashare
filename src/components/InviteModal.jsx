@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { Copy, Check, X } from 'lucide-react';
 
-export default function InviteModal({ roomCode, nickname, onClose }) {
+export default function InviteModal({ roomCode, onClose }) {
   const [copied, setCopied] = useState(false);
-  const link = `https://gustashare.vercel.app/room/${encodeURIComponent(roomCode)}?from=${encodeURIComponent(
-    nickname
-  )}`;
+  const link = `https://gustashare.vercel.app/room/${encodeURIComponent(roomCode)}`;
 
   function copy() {
     navigator.clipboard

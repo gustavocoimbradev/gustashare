@@ -13,7 +13,6 @@ export default function Dock({
   onToggleCam,
   onToggleScreen,
   roomCode,
-  nickname,
 }) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [desktopOnly, setDesktopOnly] = useState(null);
@@ -75,7 +74,7 @@ export default function Dock({
       </div>
 
       {inviteOpen && (
-        <InviteModal roomCode={roomCode} nickname={nickname} onClose={() => setInviteOpen(false)} />
+        <InviteModal roomCode={roomCode} onClose={() => setInviteOpen(false)} />
       )}
       {desktopOnly && (
         <DesktopOnlyDialog feature={desktopOnly} onClose={() => setDesktopOnly(null)} />

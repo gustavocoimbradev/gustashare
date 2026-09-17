@@ -315,7 +315,6 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
             onToggleCam={toggleCam}
             onToggleScreen={toggleScreen}
             roomCode={roomCode}
-            nickname={nickname}
           />
         </div>
 

@@ -28,23 +28,13 @@ export default function Home({ onJoin, invite }) {
     onJoin(nick, code);
   }
 
-  const invitedBy = invite?.from?.trim();
-
   return (
     <div className="home">
       <form className="home-card" onSubmit={submit}>
         <h1>GustaShare</h1>
         {invite?.roomCode ? (
           <p className="invite-banner">
-            {invitedBy ? (
-              <>
-                <strong>{invitedBy}</strong> te convidou para a sala <strong>{invite.roomCode}</strong>
-              </>
-            ) : (
-              <>
-                Você foi convidado para a sala <strong>{invite.roomCode}</strong>
-              </>
-            )}
+            Você foi convidado para a sala <strong>{invite.roomCode}</strong>
           </p>
         ) : null}
         <input
