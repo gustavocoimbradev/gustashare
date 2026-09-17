@@ -252,6 +252,7 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
         <div className="picker-backdrop" onClick={() => setLeaveOpen(false)}>
           <div className="invite-box leave-box" onClick={(e) => e.stopPropagation()}>
             <h2>Abandonar sala?</h2>
+            <p className="invite-hint">Você está prestes a sair dessa sala. Tem certeza que quer fazer isso?</p>
             <button type="button" className="leave-confirm" onClick={confirmLeave}>
               <LogOut size={16} />
               Abandonar sala
@@ -294,6 +295,7 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
                   userId={m.id}
                   nickname={m.nickname}
                   isSelf={isSelf}
+                  platform={m.platform}
                   screenStream={s.screen}
                   camStream={s.cam}
                   micStream={s.mic}
@@ -314,7 +316,7 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
           />
         </div>
 
-        <Chat messages={messages} onSend={sendChat} selfId={selfId} />
+        <Chat messages={messages} onSend={sendChat} selfId={selfId} roster={roster} />
       </div>
     </div>
   );

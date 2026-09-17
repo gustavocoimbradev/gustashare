@@ -270,13 +270,20 @@ input:focus {
   color: #fff;
 }
 
-.leave-box {
+.invite-box.leave-box {
+  width: min(280px, 92vw);
   text-align: center;
 }
 
 .leave-box h2 {
-  margin: 0 0 18px;
+  margin: 0 0 8px;
   font-size: 17px;
+  text-align: center;
+}
+
+.leave-box .invite-hint {
+  margin: 0 0 18px;
+  line-height: 1.45;
   text-align: center;
 }
 
@@ -456,11 +463,15 @@ input:focus {
   position: absolute;
   left: 10px;
   bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: rgba(0, 0, 0, 0.55);
-  padding: 4px 10px;
+  padding: 4px 8px 4px 10px;
   border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 500;
+  z-index: 4;
 }
 
 .tile-overlay {
@@ -700,6 +711,37 @@ input:focus {
   box-shadow: 0 0 0 3px rgba(var(--user-color-rgb, 59, 165, 93), 0.25);
 }
 
+.participant-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.client-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+}
+
+.client-badge.pc {
+  color: #9bb8ff;
+}
+
+.client-badge.web {
+  color: #b4a8ff;
+}
+
+.participant-row .client-badge {
+  margin-left: auto;
+}
+
 /* Chat */
 
 .chat {
@@ -743,7 +785,9 @@ input:focus {
 }
 
 .chat-message .chat-author {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
   font-weight: 600;
   color: var(--user-color, var(--accent-2));

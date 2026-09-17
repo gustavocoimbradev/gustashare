@@ -3,8 +3,9 @@ import { Maximize2, Volume1, Volume2, VolumeX } from 'lucide-react';
 import useSpeaking from '../lib/useSpeaking.js';
 import { userColorStyle } from '../lib/userColor.js';
 import Tooltip from './Tooltip.jsx';
+import ClientBadge from './ClientBadge.jsx';
 
-export default function Tile({ nickname, isSelf, userId, screenStream, camStream, micStream, cameraPosition }) {
+export default function Tile({ nickname, isSelf, userId, platform, screenStream, camStream, micStream, cameraPosition }) {
   const videoRef = useRef(null);
   const pipRef = useRef(null);
   const audioRef = useRef(null);
@@ -97,8 +98,11 @@ export default function Tile({ nickname, isSelf, userId, screenStream, camStream
       <audio ref={audioRef} autoPlay muted={isSelf || silent} />
 
       <div className="tile-name">
-        {nickname}
-        {isSelf ? ' (você)' : ''}
+        <span>
+          {nickname}
+          {isSelf ? ' (você)' : ''}
+        </span>
+        <ClientBadge platform={platform} />
       </div>
 
       {!isSelf && silent && !hover && (

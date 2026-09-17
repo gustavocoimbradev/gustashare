@@ -1,8 +1,9 @@
 import React from 'react';
 import useSpeaking from '../lib/useSpeaking.js';
 import { userColorStyle } from '../lib/userColor.js';
+import ClientBadge from './ClientBadge.jsx';
 
-function ParticipantRow({ nickname, isSelf, userId, micStream }) {
+function ParticipantRow({ nickname, isSelf, userId, platform, micStream }) {
   const speaking = useSpeaking(micStream);
 
   return (
@@ -12,6 +13,7 @@ function ParticipantRow({ nickname, isSelf, userId, micStream }) {
         {nickname}
         {isSelf ? ' (você)' : ''}
       </span>
+      <ClientBadge platform={platform} />
     </div>
   );
 }
@@ -30,6 +32,7 @@ export default function ParticipantsSidebar({ roster, selfId, streams, selfStrea
               userId={m.id}
               nickname={m.nickname}
               isSelf={isSelf}
+              platform={m.platform}
               micStream={micStream}
             />
           );

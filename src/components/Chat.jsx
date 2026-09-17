@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { SendHorizontal } from 'lucide-react';
 import { userColorStyle } from '../lib/userColor.js';
+import ClientBadge from './ClientBadge.jsx';
 
-export default function Chat({ messages, onSend, selfId }) {
+export default function Chat({ messages, onSend, selfId, roster }) {
   const [text, setText] = useState('');
   const listRef = useRef(null);
 
@@ -24,13 +25,19 @@ export default function Chat({ messages, onSend, selfId }) {
       <div className="chat-messages" ref={listRef}>
         {messages.map((m, i) => {
           const grouped = i > 0 && messages[i - 1].id === m.id;
+          const platform = m.platform || roster?.find((p) => p.id === m.id)?.platform;
           return (
             <div
               key={i}
               className={`chat-message ${m.id === selfId ? 'own' : ''} ${grouped ? 'grouped' : ''}`}
               style={userColorStyle(m.id)}
             >
-              {!grouped && <span className="chat-author">{m.nickname}</span>}
+              {!grouped && (
+                <span className="chat-author">
+                  {m.nickname}
+                  <ClientBadge platform={platform} />
+                </span>
+              )}
               <span className="chat-text">{m.text}</span>
             </div>
           );
