@@ -8,7 +8,7 @@
     "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
     "build-native": "cd native/gustashare-capture && npm install && npm run build",
     "build": "vite build && electron-builder --win portable",
-    "vercel-build": "node -e \"console.error('GustaShare: a Vercel nao deve buildar o app Electron. O site e o update-server/, publicado pelo GitHub Actions (vercel deploy). Desligue Git deploys neste projeto e ignore este build.'); process.exit(1)\"",
+    "vercel-build": "node -e \"console.error('GustaShare: Root Directory da Vercel tem que ser update-server (nao a raiz do repo).'); process.exit(1)\"",
     "build-local": "vite build && electron-builder --win portable -c.directories.output=.",
     "bump-version": "node scripts/bump-version.js",
     "sync-update-server": "node scripts/sync-update-server.js",

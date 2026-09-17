@@ -56,11 +56,11 @@ passar pelo git. `update-server/` é o projeto Vercel: `latest.json`
 No Vercel, configure:
 - **Framework Preset**: `Other`
 - **Root Directory**: `update-server`
-- **Git deploys desligados** (o `vercel.json` já manda `git.deploymentEnabled: false`).
-  Se o GitHub estiver conectado no projeto, um `git push` tenta rodar
-  `npm run build` na raiz — electron-builder de Windows em Linux da
-  Vercel — e ainda pode publicar o `update-server/` **sem** o `.exe`.
-  Só o workflow **Build and release GustaShare** deve publicar na Vercel.
+
+Com isso, `git push` publica só o site estático (`latest.json`, `room.html`).
+O `.exe` **não** vai nesse deploy (não está no git). Pra atualizar o
+instalador, rode o workflow **Build and release GustaShare** — ele manda
+o arquivo pela CLI, junto com o resto da pasta.
 
 ### Enviando código
 
