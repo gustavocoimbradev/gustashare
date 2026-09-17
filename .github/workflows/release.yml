@@ -51,24 +51,28 @@ jobs:
       - name: Build web (base absoluta, pra Vercel)
         run: npm run build:web
 
-      - name: Copiar .exe pra pasta publicada
-        shell: bash
-        run: |
-          ls -lh release/GustaShare-Portable.exe
-          cp release/GustaShare-Portable.exe dist/GustaShare-Portable.exe
+      - name: Publicar .exe no GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: GustaShare v${{ steps.version.outputs.version }}
+          files: release/GustaShare-Portable.exe
+          fail_on_unmatched_files: true
+          make_latest: true
 
       - name: Deploy na Vercel
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         # Root Directory do painel tem que estar VAZIO (raiz do repo).
-        # Publicamos só o `dist/` (app web + latest.json + .exe) num
-        # staging, senão a CLI manda node_modules/target (~750MB).
+        # Publicamos só o `dist/` (app web + latest.json) num staging.
+        # O .exe fica no GitHub Release; /GustaShare-Portable.exe redireciona.
         run: |
-          ls -lh dist/GustaShare-Portable.exe dist/latest.json
+          ls -lh dist/latest.json
           staging="$(mktemp -d)"
           mkdir -p "$staging/.vercel"
           cp update-server/.vercel/project.json "$staging/.vercel/project.json"
+          cp scripts/vercel-static.json "$staging/vercel.json"
           cp -r dist/. "$staging/"
           cd "$staging"
           npx vercel deploy --prod --yes --token="$VERCEL_TOKEN"
@@ -79,7 +83,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json update-server/latest.json
-          git diff --cached --quiet || git commit -m "chore: release v${{ steps.version.outputs.version }} [skip ci]"
+          git diff --cached --quiet || git commit -m "chore: release v${{ steps.version.outputs.version }} [skip ci] [skip vercel]"
           branch="${GITHUB_REF_NAME}"
           for i in 1 2 3 4 5; do
             git fetch origin "$branch"

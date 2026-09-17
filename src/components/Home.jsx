@@ -57,7 +57,7 @@ export default function Home({ onJoin, invite }) {
         {!isDesktop && (
           <a className="home-download" href={DESKTOP_DOWNLOAD_URL}>
             <Download size={14} />
-            Baixar versão para Windows
+            Baixar versão desktop
           </a>
         )}
       </form>

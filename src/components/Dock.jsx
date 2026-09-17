@@ -18,10 +18,6 @@ export default function Dock({
   const [desktopOnly, setDesktopOnly] = useState(null);
 
   function handleMic() {
-    if (!isDesktop) {
-      setDesktopOnly('mic');
-      return;
-    }
     onToggleMic();
   }
 

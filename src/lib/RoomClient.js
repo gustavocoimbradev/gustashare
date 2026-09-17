@@ -341,9 +341,6 @@ export default class RoomClient extends EventTarget {
   }
 
   async setMic(on) {
-    if (on && !window.gustashare) {
-      throw new Error('microfone só no desktop');
-    }
     if (on) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       this._setLocalStream('mic', stream);
