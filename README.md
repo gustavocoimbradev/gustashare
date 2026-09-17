@@ -2,7 +2,7 @@
 
 Compartilhamento de tela em tempo real, ponto a ponto (P2P), sem servidor próprio.
 
-## Como funciona
+## Como funciona 
 
 - Não existe backend rodando na nuvem. O único componente externo é o
   broker público e gratuito do [PeerJS](https://peerjs.com/) (`0.peerjs.com`),
