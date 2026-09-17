@@ -122,12 +122,6 @@
       .download-link:hover {
         color: var(--text);
       }
-
-      .hint {
-        margin-top: 14px;
-        font-size: 11px;
-        color: var(--text-dim);
-      }
     </style>
   </head>
   <body>
@@ -138,10 +132,7 @@
       <input id="nickname" placeholder="Seu nickname" maxlength="24" autofocus />
       <button id="join-btn" type="button">Entrar na sala</button>
 
-      <a
-        class="download-link"
-        href="https://github.com/gustavocoimbradev/gustashare/releases/latest/download/GustaShare-Portable.exe"
-      >
+      <a class="download-link" href="/GustaShare-Portable.exe">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
           <polyline points="7 10 12 15 17 10" />
@@ -149,8 +140,6 @@
         </svg>
         Baixar GustaShare
       </a>
-
-      <p class="hint">Já tem o programa aberto? Ele abre sozinho ao clicar em Entrar.</p>
     </div>
 
     <script>

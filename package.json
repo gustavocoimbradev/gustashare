@@ -9,7 +9,7 @@
     "build": "vite build && electron-builder --win portable",
     "bump-version": "node scripts/bump-version.js",
     "sync-update-server": "node scripts/sync-update-server.js",
-    "publish": "npm run bump-version && git add . && git pull && git commit -m \"publish\" && git push"
+    "publish": "git add . && git pull && git commit -m \"publish\" && git push"
   },
   "dependencies": {
     "lucide-react": "^1.47.0",

@@ -48,30 +48,51 @@ Isso só funciona no `.exe` portátil empacotado (usa a variável de ambiente
 arquivo substituir); em modo `npm run dev` o update é ignorado.
 
 O `.exe` **não** fica commitado no git (passa dos 100MB, limite do
-GitHub) nem hospedado na Vercel — ele é publicado como
-[GitHub Release](https://github.com/gustavocoimbradev/gustashare/releases),
-buildado por um GitHub Actions em Windows real (sem precisar de wine).
-`update-server/` continua na Vercel, mas só com arquivos pequenos:
-`latest.json` (aponta pra URL do Release da versão atual) e `room.html`
-(página de convite). No Vercel, configure:
+GitHub) — ele é buildado por um GitHub Actions em Windows real (sem
+precisar de wine) e deployado **direto na Vercel via CLI**, sem nunca
+passar pelo git. `update-server/` é o projeto Vercel: `latest.json`
+(versão atual), `room.html` (página de convite) e o próprio
+`GustaShare-Portable.exe` (só existe lá publicado, nunca no repositório).
+No Vercel, configure:
 - **Framework Preset**: `Other`
 - **Root Directory**: `update-server`
 
-### Publicando uma nova versão
+### Enviando código
 
 ```bash
 npm run publish
 ```
 
-Isso bumpa a versão (patch) em `package.json` automaticamente e roda
-`git add . && git pull && git commit -m "publish" && git push`. Só isso —
-não builda nada localmente nem dispara nada sozinho.
+Isso só roda `git add . && git pull && git commit -m "publish" && git push`.
+Não mexe em versão, não builda nada, não dispara nada sozinho — é só pra
+mandar código pro GitHub normalmente.
 
-Quando quiser gerar o `.exe` de verdade, vai em **Actions** no GitHub e
-roda manualmente o workflow **Build and release GustaShare** (botão "Run
-workflow"). Ele builda o `.exe` num runner Windows, publica como GitHub
-Release na tag `v<versão>`, e commita de volta `update-server/latest.json`
-apontando pra essa release (com `[skip ci]` pra não disparar o workflow de
-novo). Esse segundo push aciona o deploy automático na Vercel, atualizando
-`latest.json` publicado — e o auto-updater do app passa a enxergar a nova
-versão.
+### Publicando uma nova versão (gerando o .exe)
+
+A versão só muda quando você realmente builda. Vai em **Actions** no
+GitHub e roda manualmente o workflow **Build and release GustaShare**
+(botão "Run workflow"). Ele:
+1. Bumpa a versão (patch) em `package.json`.
+2. Builda o `.exe` num runner Windows real (sem wine).
+3. Copia o `.exe` pra `update-server/` e atualiza `update-server/latest.json`.
+4. Faz `vercel deploy --prod` direto da pasta `update-server/` (o `.exe`
+   vai junto nesse deploy, sem passar pelo git).
+5. Commita só `package.json` + `latest.json` de volta pro repo (o `.exe`
+   fica de fora, com `[skip ci]` pra não disparar o workflow de novo).
+
+O auto-updater do app passa a enxergar a nova versão assim que o deploy
+na Vercel terminar.
+
+#### Configurando o deploy pra Vercel
+
+O workflow precisa de 3 segredos em **Settings → Secrets and variables →
+Actions** no GitHub:
+
+- **`VERCEL_TOKEN`**: vercel.com → avatar → **Settings** → **Tokens** →
+  criar um novo token.
+- **`VERCEL_ORG_ID`** e **`VERCEL_PROJECT_ID`**: dentro da pasta
+  `update-server/`, rode `npx vercel link` uma vez localmente (loga com
+  sua conta, aponta pro projeto `gustashare` já existente na Vercel) —
+  isso cria `update-server/.vercel/project.json` com os dois IDs. Copie
+  `orgId` e `projectId` de lá pros dois segredos. (Esse arquivo pode ser
+  apagado depois — só precisava dele pra descobrir os IDs.)
