@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install dependencies
         run: npm ci
@@ -52,13 +52,32 @@ jobs:
         run: npm run build:web
 
       - name: Publicar .exe no GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: GustaShare v${{ steps.version.outputs.version }}
-          files: release/GustaShare-Portable.exe
-          fail_on_unmatched_files: true
-          make_latest: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v${{ steps.version.outputs.version }}"
+          exe="release/GustaShare-Portable.exe"
+          ls -lh "$exe"
+
+          upload() {
+            local i
+            for i in 1 2 3 4 5 6; do
+              if gh release upload "$tag" "$exe" --clobber; then
+                return 0
+              fi
+              echo "Upload falhou (tentativa $i), esperando pra tentar de novo..."
+              sleep $((i * 8))
+            done
+            return 1
+          }
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag já existe, só enviando o .exe"
+          else
+            gh release create "$tag" --title "GustaShare $tag" --notes "GustaShare $tag" --latest
+          fi
+          upload
 
       - name: Deploy na Vercel
         shell: bash
