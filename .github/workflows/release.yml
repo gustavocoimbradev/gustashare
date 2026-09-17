@@ -46,13 +46,16 @@ jobs:
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        # Roda a partir da raiz do repo — o projeto na Vercel já está
-        # configurado com Root Directory = update-server, então ele
-        # mesmo resolve o subdiretório. Rodar de dentro de update-server/
-        # faz a CLI tentar "update-server/update-server" (não existe).
-        run: npx vercel deploy --prod --yes --token="$VERCEL_TOKEN"
+        # update-server/.vercel/project.json já linka essa pasta ao
+        # projeto certo (orgId+projectId, sem segredo nenhum ali) — por
+        # isso rodamos de dentro dela: a CLI já sabe que o CWD É o
+        # diretório do projeto, sem precisar combinar com nenhum "Root
+        # Directory" configurado no painel (o que causava o path
+        # duplicado) nem fazer upload do repo inteiro (o que causava
+        # estourar 100MB de novo com a pasta release/ junto).
+        run: |
+          cd update-server
+          npx vercel deploy --prod --yes --token="$VERCEL_TOKEN"
 
       - name: Commitar versão + latest.json
         shell: bash
