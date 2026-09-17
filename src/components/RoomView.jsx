@@ -6,7 +6,7 @@ import ScreenPickerModal from './ScreenPickerModal.jsx';
 import ParticipantsSidebar from './ParticipantsSidebar.jsx';
 import Dock from './Dock.jsx';
 import CameraPositionModal from './CameraPositionModal.jsx';
-import { LogOut, X } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { playJoinSound, playLeaveSound, playChatSound, playMediaOnSound, playMicOnSound, playMicOffSound } from '../lib/sounds.js';
 import { captureWindowNative } from '../lib/nativeCapture.js';
 
@@ -251,22 +251,14 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
       {leaveOpen && (
         <div className="picker-backdrop" onClick={() => setLeaveOpen(false)}>
           <div className="invite-box leave-box" onClick={(e) => e.stopPropagation()}>
-            <div className="dialog-head">
-              <h2>Abandonar sala?</h2>
-              <button type="button" className="dialog-close" onClick={() => setLeaveOpen(false)} aria-label="Fechar">
-                <X size={18} />
-              </button>
-            </div>
-            <p className="invite-hint">Você volta pra tela inicial.</p>
-            <div className="picker-actions">
-              <button type="button" onClick={() => setLeaveOpen(false)}>
-                Cancelar
-              </button>
-              <button type="button" className="leave-confirm" onClick={confirmLeave}>
-                <LogOut size={15} />
-                Abandonar sala
-              </button>
-            </div>
+            <h2>Abandonar sala?</h2>
+            <button type="button" className="leave-confirm" onClick={confirmLeave}>
+              <LogOut size={16} />
+              Abandonar sala
+            </button>
+            <button type="button" className="leave-cancel" onClick={() => setLeaveOpen(false)}>
+              Cancelar
+            </button>
           </div>
         </div>
       )}
