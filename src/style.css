@@ -500,6 +500,8 @@ input:focus {
 
 .tile video.pip-cam {
   position: absolute;
+  right: 10px;
+  bottom: 10px;
   width: clamp(104px, 14%, 148px);
   height: auto;
   max-height: none;
@@ -510,26 +512,6 @@ input:focus {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
   background: #000;
   z-index: 5;
-}
-
-.pip-cam.top-left {
-  top: 10px;
-  left: 10px;
-}
-
-.pip-cam.top-right {
-  top: 10px;
-  right: 10px;
-}
-
-.pip-cam.bottom-left {
-  bottom: 10px;
-  left: 10px;
-}
-
-.pip-cam.bottom-right {
-  bottom: 10px;
-  right: 10px;
 }
 
 .avatar {
@@ -1151,73 +1133,6 @@ input:focus {
   padding: 0;
 }
 
-/* Camera position modal */
-
-.position-box {
-  width: min(360px, 90vw);
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-md);
-  padding: 22px;
-}
-
-.position-box h2 {
-  margin: 0 0 6px;
-  font-size: 17px;
-}
-
-.position-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 4px;
-  aspect-ratio: 16 / 10;
-  margin-top: 16px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-
-.position-option {
-  background: var(--surface-2);
-  border-radius: 0;
-  display: flex;
-  padding: 10px;
-  transition: background 0.15s ease;
-}
-
-.position-option.top-left {
-  align-items: flex-start;
-  justify-content: flex-start;
-}
-
-.position-option.top-right {
-  align-items: flex-start;
-  justify-content: flex-end;
-}
-
-.position-option.bottom-left {
-  align-items: flex-end;
-  justify-content: flex-start;
-}
-
-.position-option.bottom-right {
-  align-items: flex-end;
-  justify-content: flex-end;
-}
-
-.position-option:hover {
-  background: var(--accent-gradient);
-}
-
-.position-dot {
-  width: 26px;
-  height: 18px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.85);
-}
-
 /* Update overlay */
 
 .update-overlay {
@@ -1474,6 +1389,7 @@ input:focus {
     border-radius: 20px 20px 0 0;
     box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
     overflow: hidden;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   }
 
   .participants.open,
@@ -1512,14 +1428,14 @@ input:focus {
   }
 
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
-    padding: 10px 10px calc(108px + env(safe-area-inset-bottom, 0px));
+    padding: 12px 12px calc(108px + env(safe-area-inset-bottom, 0px));
   }
 
   .tile {
     aspect-ratio: 16 / 10;
-    min-height: 200px;
+    min-height: 0;
   }
 
   .dock {

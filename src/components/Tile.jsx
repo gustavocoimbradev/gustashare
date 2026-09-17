@@ -1,19 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Maximize2, Volume1, Volume2, VolumeX } from 'lucide-react';
+import { Maximize2, Volume1, Volume2, VolumeX, X } from 'lucide-react';
 import useSpeaking from '../lib/useSpeaking.js';
 import { userColorStyle } from '../lib/userColor.js';
 import Tooltip from './Tooltip.jsx';
 import ClientBadge from './ClientBadge.jsx';
 import MicBadge from './MicBadge.jsx';
 
-export default function Tile({ nickname, isSelf, userId, platform, screenStream, camStream, micStream, cameraPosition }) {
+export default function Tile({ nickname, isSelf, userId, platform, screenStream, camStream, micStream }) {
   const videoRef = useRef(null);
   const pipRef = useRef(null);
   const audioRef = useRef(null);
+  const stageRef = useRef(null);
   const lastVolumeRef = useRef(1);
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
   const [hover, setHover] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const speaking = useSpeaking(micStream);
 
   const mainStream = screenStream || camStream;
@@ -44,8 +46,53 @@ export default function Tile({ nickname, isSelf, userId, platform, screenStream,
     }
   }, [volume, silent, isSelf]);
 
-  function goFullscreen() {
-    if (videoRef.current?.requestFullscreen) videoRef.current.requestFullscreen();
+  useEffect(() => {
+    function onFullscreenChange() {
+      const node = document.fullscreenElement || document.webkitFullscreenElement;
+      if (node && node !== stageRef.current) setExpanded(false);
+      if (!node && expanded) setExpanded(false);
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+    };
+  }, [expanded]);
+
+  useEffect(() => {
+    if (!expanded) return undefined;
+    function onKey(e) {
+      if (e.key === 'Escape') setExpanded(false);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [expanded]);
+
+  async function goFullscreen() {
+    const el = stageRef.current;
+    if (!el) return;
+    try {
+      if (el.requestFullscreen) {
+        await el.requestFullscreen();
+        return;
+      }
+      if (el.webkitRequestFullscreen) {
+        el.webkitRequestFullscreen();
+        return;
+      }
+    } catch {
+      // iOS / browsers that only fullscreen <video> — overlay local
+    }
+    setExpanded(true);
+  }
+
+  function exitExpanded() {
+    setExpanded(false);
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      document.exitFullscreen?.();
+      document.webkitExitFullscreen?.();
+    }
   }
 
   function toggleMute() {
@@ -75,26 +122,34 @@ export default function Tile({ nickname, isSelf, userId, platform, screenStream,
 
   return (
     <div
-      className={`tile ${speaking ? 'speaking' : ''}`}
+      className={`tile ${speaking ? 'speaking' : ''} ${expanded ? 'expanded' : ''}`}
       style={userColorStyle(userId)}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      {mainStream ? (
-        <video ref={videoRef} autoPlay playsInline muted={isSelf || silent} />
-      ) : (
-        <div className="avatar">{nickname.slice(0, 2).toUpperCase()}</div>
-      )}
+      <div ref={stageRef} className={`tile-stage ${expanded ? 'expanded' : ''}`}>
+        {mainStream ? (
+          <video ref={videoRef} autoPlay playsInline muted={isSelf || silent} />
+        ) : (
+          <div className="avatar">{nickname.slice(0, 2).toUpperCase()}</div>
+        )}
 
-      {showPip && (
-        <video
-          ref={pipRef}
-          autoPlay
-          playsInline
-          muted={isSelf}
-          className={`pip-cam ${cameraPosition || 'bottom-right'}`}
-        />
-      )}
+        {showPip && (
+          <video
+            ref={pipRef}
+            autoPlay
+            playsInline
+            muted={isSelf}
+            className="pip-cam"
+          />
+        )}
+
+        {expanded && (
+          <button type="button" className="tile-expanded-close" onClick={exitExpanded} aria-label="Sair da tela cheia">
+            <X size={18} />
+          </button>
+        )}
+      </div>
 
       <audio ref={audioRef} autoPlay muted={isSelf || silent} />
 

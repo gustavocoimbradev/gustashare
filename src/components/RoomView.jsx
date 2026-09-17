@@ -5,7 +5,6 @@ import Chat from './Chat.jsx';
 import ScreenPickerModal from './ScreenPickerModal.jsx';
 import ParticipantsSidebar from './ParticipantsSidebar.jsx';
 import Dock from './Dock.jsx';
-import CameraPositionModal from './CameraPositionModal.jsx';
 import { LogOut } from 'lucide-react';
 import TitleBar from './TitleBar.jsx';
 import { playJoinSound, playLeaveSound, playChatSound, playMediaOnSound, playMicOnSound, playMicOffSound } from '../lib/sounds.js';
@@ -24,8 +23,6 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
   const [camOn, setCamOn] = useState(false);
   const [screenOn, setScreenOn] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [cameraPositions, setCameraPositions] = useState({});
-  const [positionPromptOpen, setPositionPromptOpen] = useState(false);
   const [screenSources, setScreenSources] = useState(null);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState(null);
@@ -84,10 +81,6 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
       }
     });
 
-    client.addEventListener('camera-positions', (e) => {
-      setCameraPositions(e.detail);
-    });
-
     client.start().then(() => {
       setSelfId(client.peer.id);
       setReady(true);
@@ -115,11 +108,10 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
     setCamOn(next);
     try {
       await clientRef.current.setCam(next);
-      if (next && screenOn) setPositionPromptOpen(true);
     } catch {
       setCamOn(!next);
     }
-  }, [camOn, screenOn]);
+  }, [camOn]);
 
   const toggleScreen = useCallback(async () => {
     if (screenOn) {
@@ -138,7 +130,7 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
       const sources = await window.gustashare?.listScreenSources?.();
       if (sources?.length) setScreenSources(sources);
     }
-  }, [screenOn, camOn]);
+  }, [screenOn]);
 
   async function startShareFromDisplayMedia(stream) {
     const videoTrack = stream.getVideoTracks()[0];
@@ -179,7 +171,6 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
             });
             clientRef.current.setScreenFromStream(mixed);
             setScreenOn(true);
-            if (camOn) setPositionPromptOpen(true);
             return;
           } catch (err) {
             console.error('Áudio nativo falhou, usando o stream do picker:', err);
@@ -196,7 +187,6 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
     });
     clientRef.current.setScreenFromStream(stream);
     setScreenOn(true);
-    if (camOn) setPositionPromptOpen(true);
   }
 
   async function confirmScreenSource(choice) {
@@ -214,7 +204,6 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
           nativeCaptureRef.current = capture;
           clientRef.current.setScreenFromStream(capture.stream);
           setScreenOn(true);
-          if (camOn) setPositionPromptOpen(true);
           return;
         } catch (err) {
           console.error('Captura nativa falhou, caindo pro getDisplayMedia:', err);
@@ -226,7 +215,6 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
     try {
       await clientRef.current.setScreen(true, choice);
       setScreenOn(true);
-      if (camOn) setPositionPromptOpen(true);
     } catch {
       // usuário cancelou no diálogo nativo, ou a captura falhou
     }
@@ -234,11 +222,6 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
 
   function cancelScreenSource() {
     setScreenSources(null);
-  }
-
-  function selectCameraPosition(position) {
-    clientRef.current.sendCameraPosition(position);
-    setPositionPromptOpen(false);
   }
 
   function sendChat(text) {
@@ -268,12 +251,6 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
           sources={screenSources}
           onConfirm={confirmScreenSource}
           onCancel={cancelScreenSource}
-        />
-      )}
-      {positionPromptOpen && (
-        <CameraPositionModal
-          onSelect={selectCameraPosition}
-          onClose={() => setPositionPromptOpen(false)}
         />
       )}
       {leaveOpen && (
@@ -342,7 +319,6 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
                   screenStream={s.screen}
                   camStream={s.cam}
                   micStream={s.mic}
-                  cameraPosition={cameraPositions[m.id]}
                 />
               );
             })}
