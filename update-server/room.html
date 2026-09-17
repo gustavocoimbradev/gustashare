@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GustaShare — Convite</title>
+    <style>
+      :root {
+        --bg: #101218;
+        --surface: #1a1d24;
+        --surface-2: #22262f;
+        --border: #2a2e38;
+        --text: #eef0f3;
+        --text-dim: #9098a8;
+        --accent-1: #7c6bfb;
+        --accent-2: #4a7dff;
+        --accent-gradient: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+        --radius-md: 14px;
+        --radius-lg: 20px;
+        --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        background:
+          radial-gradient(circle at 30% 20%, rgba(124, 107, 251, 0.18), transparent 55%),
+          radial-gradient(circle at 75% 80%, rgba(74, 125, 255, 0.14), transparent 55%),
+          var(--bg);
+        color: var(--text);
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+
+      .card {
+        width: 100%;
+        max-width: 360px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        padding: 30px 28px;
+        text-align: center;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+        font-weight: 800;
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      p.invite-text {
+        margin: 0 0 20px;
+        font-size: 14px;
+        color: var(--text-dim);
+        line-height: 1.5;
+      }
+
+      p.invite-text strong {
+        color: var(--text);
+      }
+
+      input {
+        width: 100%;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        padding: 11px 14px;
+        font-size: 14px;
+        margin-bottom: 12px;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: var(--accent-2);
+      }
+
+      button {
+        width: 100%;
+        cursor: pointer;
+        border: none;
+        border-radius: var(--radius-md);
+        padding: 12px 16px;
+        background: var(--accent-gradient);
+        color: var(--text);
+        font-size: 15px;
+        font-weight: 700;
+        box-shadow: 0 6px 18px rgba(74, 125, 255, 0.35);
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      .download-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 18px;
+        color: var(--text-dim);
+        font-size: 13px;
+        text-decoration: none;
+      }
+
+      .download-link:hover {
+        color: var(--text);
+      }
+
+      .hint {
+        margin-top: 14px;
+        font-size: 11px;
+        color: var(--text-dim);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>GustaShare</h1>
+      <p class="invite-text" id="invite-text">Você foi convidado para uma sala.</p>
+
+      <input id="nickname" placeholder="Seu nickname" maxlength="24" autofocus />
+      <button id="join-btn" type="button">Entrar na sala</button>
+
+      <a class="download-link" href="/GustaShare-Portable.exe">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        Baixar GustaShare
+      </a>
+
+      <p class="hint">Já tem o programa aberto? Ele abre sozinho ao clicar em Entrar.</p>
+    </div>
+
+    <script>
+      var params = new URLSearchParams(window.location.search);
+      var from = params.get('from');
+      var code = window.location.pathname.replace(/^\/room\//, '').replace(/\/$/, '');
+
+      var inviteText = document.getElementById('invite-text');
+      if (from) {
+        inviteText.innerHTML =
+          '<strong>' + escapeHtml(from) + '</strong> te convidou para a sala <strong>' + escapeHtml(code) + '</strong>';
+      } else {
+        inviteText.innerHTML = 'Você foi convidado para a sala <strong>' + escapeHtml(code) + '</strong>';
+      }
+
+      document.getElementById('join-btn').addEventListener('click', function () {
+        var nickname = document.getElementById('nickname').value.trim();
+        if (!nickname) {
+          document.getElementById('nickname').focus();
+          return;
+        }
+        var deepLink =
+          'gustashare://room/' + encodeURIComponent(code) + '?nickname=' + encodeURIComponent(nickname);
+        window.location.href = deepLink;
+      });
+
+      function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+    </script>
+  </body>
+</html>

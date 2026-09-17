@@ -53,7 +53,9 @@ export default function ScreenPickerModal() {
                     onClick={() => setSelectedId(s.id)}
                   >
                     <img src={s.thumbnail} alt={s.name} />
-                    <span>{s.name || `Tela ${i + 1}`}</span>
+                    <span className="picker-item-label">
+                      <span className="picker-item-text">{s.name || `Tela ${i + 1}`}</span>
+                    </span>
                   </button>
                 ))}
               </div>
@@ -72,9 +74,9 @@ export default function ScreenPickerModal() {
                     onClick={() => setSelectedId(s.id)}
                   >
                     <img src={s.thumbnail} alt={s.name} />
-                    <span>
+                    <span className="picker-item-label">
                       {s.appIcon && <img className="app-icon" src={s.appIcon} alt="" />}
-                      {s.name}
+                      <span className="picker-item-text">{s.name}</span>
                     </span>
                   </button>
                 ))}

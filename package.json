@@ -1,6 +1,6 @@
 {
   "name": "gustashare",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "private": true,
   "description": "Compartilhamento de tela P2P, sem servidor proprio",
   "main": "electron/main.js",
@@ -9,7 +9,7 @@
     "build": "vite build && electron-builder --win portable",
     "bump-version": "node scripts/bump-version.js",
     "sync-update-server": "node scripts/sync-update-server.js",
-    "publish": "npm run bump-version && npm run build && npm run sync-update-server && git add . && git pull && git commit -m \"publish\" && git push"
+    "publish": "npm run bump-version && git add . && git pull && git commit -m \"publish\" && git push"
   },
   "dependencies": {
     "lucide-react": "^1.47.0",
@@ -21,7 +21,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "concurrently": "^9.0.1",
     "cross-env": "^7.0.3",
-    "electron": "^33.0.0",
+    "electron": "^44.0.0",
     "electron-builder": "^25.1.8",
     "vite": "^5.4.8",
     "wait-on": "^8.0.1"
@@ -44,7 +44,7 @@
     }
   },
   "allowScripts": {
-    "electron@33.4.11": true,
-    "esbuild@0.21.5": true
+    "esbuild@0.21.5": true,
+    "electron@44.4.1": true
   }
 }

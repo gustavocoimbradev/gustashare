@@ -12,5 +12,8 @@
         { "key": "Cache-Control", "value": "no-store" }
       ]
     }
+  ],
+  "rewrites": [
+    { "source": "/room/:code", "destination": "/room.html" }
   ]
 }

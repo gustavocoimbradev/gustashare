@@ -1,0 +1,55 @@
+name: Build and release GustaShare
+
+# So dispara quando package.json muda (ou seja, quando "npm run publish"
+# bumpou a versao) — evita rodar em todo push sem necessidade.
+on:
+  push:
+    branches: [main]
+    paths:
+      - package.json
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app (Windows real, sem wine)
+        run: npm run build
+
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: echo "version=$(node -p "require('./package.json').version")" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          files: release/GustaShare-Portable.exe
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Atualizar latest.json
+        run: node scripts/sync-update-server.js
+
+      - name: Commitar latest.json
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add update-server/latest.json
+          git diff --cached --quiet || git commit -m "chore: latest.json -> v${{ steps.version.outputs.version }} [skip ci]"
+          git push

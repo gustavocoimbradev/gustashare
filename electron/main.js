@@ -4,6 +4,7 @@ const { checkForUpdate } = require('./updater.js');
 
 const HOME_SIZE = { width: 440, height: 560 };
 const ROOM_SIZE = { width: 1280, height: 820 };
+const PROTOCOL = 'gustashare';
 
 let pendingSources = [];
 let updating = false;
@@ -17,11 +18,52 @@ process.on('uncaughtException', (err) => {
   console.error('uncaughtException:', err);
 });
 
+// ----- Deep link (gustashare://room/CODIGO?nickname=Fulano) -----
+
+function parseDeepLink(link) {
+  try {
+    const url = new URL(link);
+    if (url.protocol !== `${PROTOCOL}:` || url.host !== 'room') return null;
+    const roomCode = decodeURIComponent(url.pathname.replace(/^\//, ''));
+    if (!roomCode) return null;
+    const nickname = url.searchParams.get('nickname') || '';
+    return { roomCode, nickname };
+  } catch {
+    return null;
+  }
+}
+
+function findDeepLinkArg(argv) {
+  return argv.find((a) => a.startsWith(`${PROTOCOL}://`));
+}
+
+function sendDeepLink(win, link) {
+  const parsed = parseDeepLink(link);
+  if (!parsed || !win) return;
+  win.webContents.send('deep-link', parsed);
+}
+
+function registerProtocolHandler() {
+  // App portátil: precisa apontar o handler pro .exe real (não a cópia
+  // temporária extraída em runtime), senão o registro fica quebrado.
+  if (process.defaultApp) {
+    if (process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
+    }
+  } else {
+    app.setAsDefaultProtocolClient(PROTOCOL, process.env.PORTABLE_EXECUTABLE_FILE || process.execPath);
+  }
+}
+
+const startupDeepLink = findDeepLinkArg(process.argv);
+
 function createWindow() {
+  const initialSize = startupDeepLink ? ROOM_SIZE : HOME_SIZE;
+
   const win = new BrowserWindow({
-    width: HOME_SIZE.width,
-    height: HOME_SIZE.height,
-    resizable: false,
+    width: initialSize.width,
+    height: initialSize.height,
+    resizable: !!startupDeepLink,
     autoHideMenuBar: true,
     backgroundColor: '#14161a',
     webPreferences: {
@@ -93,6 +135,7 @@ function createWindow() {
   }
 
   win.webContents.on('did-finish-load', () => {
+    if (startupDeepLink) sendDeepLink(win, startupDeepLink);
     checkForUpdate(win, (value) => {
       updating = value;
     });
@@ -110,13 +153,32 @@ ipcMain.on('window:set-mode', (event, mode) => {
   win.center();
 });
 
-app.whenReady().then(() => {
-  createWindow();
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
-});
+// Só uma instância roda por vez: se o usuário clicar num link de convite
+// com o app já aberto, reaproveita a janela existente em vez de abrir
+// outra.
+const gotLock = app.requestSingleInstanceLock();
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, argv) => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (!win) return;
+    if (win.isMinimized()) win.restore();
+    win.focus();
+    const link = findDeepLinkArg(argv);
+    if (link) sendDeepLink(win, link);
+  });
+
+  app.whenReady().then(() => {
+    registerProtocolHandler();
+    createWindow();
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit();
+  });
+}

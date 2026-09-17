@@ -35,6 +35,7 @@ export default class RoomClient extends EventTarget {
     this.localStreams = { screen: null, cam: null, mic: null };
     this.stopped = false;
     this._rosterInitialized = false;
+    this.cameraPositions = new Map(); // peerId -> 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
   }
 
   emit(name, detail) {
@@ -93,6 +94,8 @@ export default class RoomClient extends EventTarget {
 
     conn.on('data', (data) => {
       if (data.type === 'roster') {
+        this.cameraPositions = new Map(Object.entries(data.cameraPositions || {}));
+        this.emit('camera-positions', Object.fromEntries(this.cameraPositions));
         this._applyRoster(data.roster);
         if (!firstDone) {
           firstDone = true;
@@ -131,6 +134,10 @@ export default class RoomClient extends EventTarget {
     } else if (data.type === 'chat') {
       this.emit('chat', data);
       this._broadcastChat(data, conn);
+    } else if (data.type === 'camera-position') {
+      this.cameraPositions.set(data.id, data.position);
+      this.emit('camera-positions', Object.fromEntries(this.cameraPositions));
+      this._broadcastRoster();
     }
   }
 
@@ -144,8 +151,9 @@ export default class RoomClient extends EventTarget {
   }
 
   _broadcastRoster() {
+    const cameraPositions = Object.fromEntries(this.cameraPositions);
     for (const conn of this.memberConns.values()) {
-      if (conn.open) conn.send({ type: 'roster', roster: this.roster });
+      if (conn.open) conn.send({ type: 'roster', roster: this.roster, cameraPositions });
     }
   }
 
@@ -165,6 +173,18 @@ export default class RoomClient extends EventTarget {
       this._broadcastChat(msg);
     } else if (this.hostConn && this.hostConn.open) {
       this.hostConn.send(msg);
+    }
+  }
+
+  // ----- Posição da câmera (PiP sobre a tela compartilhada) -----
+
+  sendCameraPosition(position) {
+    this.cameraPositions.set(this.peer.id, position);
+    this.emit('camera-positions', Object.fromEntries(this.cameraPositions));
+    if (this.isHost) {
+      this._broadcastRoster();
+    } else if (this.hostConn && this.hostConn.open) {
+      this.hostConn.send({ type: 'camera-position', id: this.peer.id, position });
     }
   }
 

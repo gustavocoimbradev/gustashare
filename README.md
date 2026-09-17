@@ -47,9 +47,13 @@ Isso só funciona no `.exe` portátil empacotado (usa a variável de ambiente
 `PORTABLE_EXECUTABLE_FILE` que o electron-builder expõe para saber qual
 arquivo substituir); em modo `npm run dev` o update é ignorado.
 
-`update-server/` é um projeto Vercel separado e propositalmente simples —
-só serve `latest.json` e o `.exe` da versão atual como arquivos estáticos,
-sem nenhum backend. No Vercel, configure:
+O `.exe` **não** fica commitado no git (passa dos 100MB, limite do
+GitHub) nem hospedado na Vercel — ele é publicado como
+[GitHub Release](https://github.com/gustavocoimbradev/gustashare/releases),
+buildado por um GitHub Actions em Windows real (sem precisar de wine).
+`update-server/` continua na Vercel, mas só com arquivos pequenos:
+`latest.json` (aponta pra URL do Release da versão atual) e `room.html`
+(página de convite). No Vercel, configure:
 - **Framework Preset**: `Other`
 - **Root Directory**: `update-server`
 
@@ -59,19 +63,14 @@ sem nenhum backend. No Vercel, configure:
 npm run publish
 ```
 
-Isso, em sequência:
-1. Bumpa a versão (patch) em `package.json` automaticamente — não precisa informar nada.
-2. Builda o app (`vite build` + `electron-builder --win portable`).
-3. Copia o `.exe` novo para `update-server/` e atualiza `update-server/latest.json`
-   (apaga o `.exe` da versão anterior do diretório de trabalho, pra não acumular
-   binário a cada publish).
-4. Roda `git add . && git pull && git commit -m "publish" && git push`.
+Isso bumpa a versão (patch) em `package.json` automaticamente e roda
+`git add . && git pull && git commit -m "publish" && git push`. Só isso —
+não builda nada localmente.
 
-O push aciona o deploy automático na Vercel (se o projeto estiver
-conectado ao repositório), o que atualiza `latest.json` e o `.exe`
-publicados — e o auto-updater do app passa a enxergar a nova versão.
-
-> Cada publish comita um `.exe` novo (~70MB) no histórico do git. Isso
-> cresce o repositório com o tempo; se isso virar um problema, migrar
-> `update-server/` para Git LFS resolve, mas não fiz isso agora pra manter
-> o fluxo simples.
+O push (por mudar `package.json`) dispara o workflow
+`.github/workflows/release.yml`, que builda o `.exe` num runner Windows,
+publica como GitHub Release na tag `v<versão>`, e commita de volta
+`update-server/latest.json` apontando pra essa release (com `[skip ci]`
+pra não disparar o workflow de novo). Esse segundo push aciona o deploy
+automático na Vercel, atualizando `latest.json` publicado — e o
+auto-updater do app passa a enxergar a nova versão.

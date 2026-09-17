@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
-
-const NICK_KEY = 'gustashare:nickname';
-const ROOM_KEY = 'gustashare:roomCode';
+import { saveSession, loadSession } from '../lib/storage.js';
 
 export default function Home({ onJoin }) {
   const [nickname, setNickname] = useState('');
@@ -9,14 +7,9 @@ export default function Home({ onJoin }) {
 
   useEffect(() => {
     window.gustashare?.setWindowMode('home');
-    try {
-      const savedNick = localStorage.getItem(NICK_KEY);
-      const savedRoom = localStorage.getItem(ROOM_KEY);
-      if (savedNick) setNickname(savedNick);
-      if (savedRoom) setRoomCode(savedRoom);
-    } catch {
-      // localStorage indisponível — segue sem persistência
-    }
+    const saved = loadSession();
+    if (saved.nickname) setNickname(saved.nickname);
+    if (saved.roomCode) setRoomCode(saved.roomCode);
   }, []);
 
   function submit(e) {
@@ -24,12 +17,7 @@ export default function Home({ onJoin }) {
     const nick = nickname.trim();
     const code = roomCode.trim();
     if (!nick || !code) return;
-    try {
-      localStorage.setItem(NICK_KEY, nick);
-      localStorage.setItem(ROOM_KEY, code);
-    } catch {
-      // localStorage indisponível — só não persiste
-    }
+    saveSession(nick, code);
     onJoin(nick, code);
   }
 

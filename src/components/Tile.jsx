@@ -1,18 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import useSpeaking from '../lib/useSpeaking.js';
 
-export default function Tile({ nickname, isSelf, screenStream, camStream, micStream }) {
+export default function Tile({ nickname, isSelf, screenStream, camStream, micStream, cameraPosition }) {
   const videoRef = useRef(null);
+  const pipRef = useRef(null);
   const audioRef = useRef(null);
   const [volume, setVolume] = useState(1);
   const [hover, setHover] = useState(false);
   const speaking = useSpeaking(micStream);
 
-  const videoStream = screenStream || camStream;
+  const mainStream = screenStream || camStream;
+  const showPip = !!screenStream && !!camStream;
 
   useEffect(() => {
-    if (videoRef.current) videoRef.current.srcObject = videoStream || null;
-  }, [videoStream]);
+    if (videoRef.current) videoRef.current.srcObject = mainStream || null;
+  }, [mainStream]);
+
+  useEffect(() => {
+    if (pipRef.current) pipRef.current.srcObject = showPip ? camStream : null;
+  }, [showPip, camStream]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.srcObject = micStream || null;
@@ -33,11 +39,22 @@ export default function Tile({ nickname, isSelf, screenStream, camStream, micStr
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      {videoStream ? (
+      {mainStream ? (
         <video ref={videoRef} autoPlay playsInline muted={isSelf} />
       ) : (
         <div className="avatar">{nickname.slice(0, 2).toUpperCase()}</div>
       )}
+
+      {showPip && (
+        <video
+          ref={pipRef}
+          autoPlay
+          playsInline
+          muted={isSelf}
+          className={`pip-cam ${cameraPosition || 'bottom-right'}`}
+        />
+      )}
+
       <audio ref={audioRef} autoPlay muted={isSelf} />
 
       <div className="tile-name">
@@ -47,7 +64,7 @@ export default function Tile({ nickname, isSelf, screenStream, camStream, micStr
 
       {hover && (
         <div className="tile-overlay">
-          {videoStream && (
+          {mainStream && (
             <button className="expand" onClick={goFullscreen} title="Tela cheia">
               ⛶
             </button>

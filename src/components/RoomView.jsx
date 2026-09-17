@@ -5,6 +5,7 @@ import Chat from './Chat.jsx';
 import ScreenPickerModal from './ScreenPickerModal.jsx';
 import ParticipantsSidebar from './ParticipantsSidebar.jsx';
 import Dock from './Dock.jsx';
+import CameraPositionModal from './CameraPositionModal.jsx';
 import { playJoinSound, playLeaveSound } from '../lib/sounds.js';
 
 export default function RoomView({ nickname, roomCode }) {
@@ -18,6 +19,8 @@ export default function RoomView({ nickname, roomCode }) {
   const [camOn, setCamOn] = useState(false);
   const [screenOn, setScreenOn] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [cameraPositions, setCameraPositions] = useState({});
+  const [positionPromptOpen, setPositionPromptOpen] = useState(false);
 
   useEffect(() => {
     window.gustashare?.setWindowMode('room');
@@ -66,6 +69,10 @@ export default function RoomView({ nickname, roomCode }) {
       setMessages((prev) => [...prev, e.detail]);
     });
 
+    client.addEventListener('camera-positions', (e) => {
+      setCameraPositions(e.detail);
+    });
+
     client.start().then(() => {
       setSelfId(client.peer.id);
       setReady(true);
@@ -89,10 +96,11 @@ export default function RoomView({ nickname, roomCode }) {
     setCamOn(next);
     try {
       await clientRef.current.setCam(next);
+      if (next && screenOn) setPositionPromptOpen(true);
     } catch {
       setCamOn(!next);
     }
-  }, [camOn]);
+  }, [camOn, screenOn]);
 
   const toggleScreen = useCallback(async () => {
     const next = !screenOn;
@@ -104,10 +112,16 @@ export default function RoomView({ nickname, roomCode }) {
     try {
       await clientRef.current.setScreen(true);
       setScreenOn(true);
+      if (camOn) setPositionPromptOpen(true);
     } catch {
       // usuário cancelou o seletor de tela
     }
-  }, [screenOn]);
+  }, [screenOn, camOn]);
+
+  function selectCameraPosition(position) {
+    clientRef.current.sendCameraPosition(position);
+    setPositionPromptOpen(false);
+  }
 
   function sendChat(text) {
     clientRef.current.sendChat(text);
@@ -116,6 +130,12 @@ export default function RoomView({ nickname, roomCode }) {
   return (
     <div className="room">
       <ScreenPickerModal />
+      {positionPromptOpen && (
+        <CameraPositionModal
+          onSelect={selectCameraPosition}
+          onClose={() => setPositionPromptOpen(false)}
+        />
+      )}
 
       <div className="topbar">
         <div className="room-code">
@@ -141,6 +161,7 @@ export default function RoomView({ nickname, roomCode }) {
                   screenStream={s.screen}
                   camStream={s.cam}
                   micStream={s.mic}
+                  cameraPosition={cameraPositions[m.id]}
                 />
               );
             })}
@@ -153,6 +174,8 @@ export default function RoomView({ nickname, roomCode }) {
             onToggleMic={toggleMic}
             onToggleCam={toggleCam}
             onToggleScreen={toggleScreen}
+            roomCode={roomCode}
+            nickname={nickname}
           />
         </div>
 

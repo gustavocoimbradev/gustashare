@@ -15,4 +15,10 @@ contextBridge.exposeInMainWorld('gustashare', {
     ipcRenderer.on('update:status', listener);
     return () => ipcRenderer.removeListener('update:status', listener);
   },
+
+  onDeepLink: (callback) => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('deep-link', listener);
+    return () => ipcRenderer.removeListener('deep-link', listener);
+  },
 });
