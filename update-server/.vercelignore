@@ -1,0 +1,4 @@
+# Vazio de propósito: sem isso, a Vercel CLI cai pro .gitignore da raiz
+# do repo (que exclui update-server/*.exe pra proteger commits locais),
+# e acaba excluindo o .exe do próprio deploy também. Esse arquivo tem
+# prioridade sobre aquele .gitignore e garante que nada aqui é ignorado.

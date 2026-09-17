@@ -2,7 +2,7 @@
   "name": "gustashare",
   "version": "1.0.7",
   "private": true,
-  "description": "Compartilhamento de tela P2P, sem servidor proprio",
+  "description": "GustaShare",
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
