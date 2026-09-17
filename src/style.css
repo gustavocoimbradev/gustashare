@@ -789,6 +789,14 @@ input:focus {
   white-space: nowrap;
 }
 
+.participant-badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .client-badge {
   display: inline-flex;
   align-items: center;
@@ -809,8 +817,23 @@ input:focus {
   color: #b4a8ff;
 }
 
-.participant-row .client-badge {
-  margin-left: auto;
+.mic-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mic-badge.on {
+  color: var(--accent-green);
+}
+
+.mic-badge.off {
+  color: #8b919e;
 }
 
 /* Chat */
@@ -841,6 +864,9 @@ input:focus {
 }
 
 .chat-message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   font-size: 13px;
   line-height: 1.45;
   word-break: break-word;
@@ -856,7 +882,7 @@ input:focus {
 }
 
 .chat-message .chat-author {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
   font-size: 11px;
@@ -890,6 +916,11 @@ input:focus {
 
 .chat-game-link:hover {
   color: var(--text);
+}
+
+.chat-text {
+  display: block;
+  width: 100%;
 }
 
 .chat-form {

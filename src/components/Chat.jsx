@@ -4,7 +4,7 @@ import { userColorStyle } from '../lib/userColor.js';
 import ClientBadge from './ClientBadge.jsx';
 import { faviconUrl, openGame } from '../lib/games.js';
 
-function GameInviteText({ nickname, game }) {
+function GameInviteText({ game }) {
   const [iconFailed, setIconFailed] = useState(false);
   const name = game?.name || 'um jogo';
 
@@ -15,7 +15,7 @@ function GameInviteText({ nickname, game }) {
 
   return (
     <span className="chat-text">
-      {nickname} convidou vocês para jogar{' '}
+      convidou vocês para jogar{' '}
       <a className="chat-game-link" href={game.url} target="_blank" rel="noopener noreferrer" onClick={onGameClick}>
         {!iconFailed && game?.domain ? (
           <img
@@ -63,14 +63,14 @@ export default function Chat({ messages, onSend, selfId, roster }) {
               className={`chat-message ${m.id === selfId ? 'own' : ''} ${grouped ? 'grouped' : ''}`}
               style={userColorStyle(m.id)}
             >
-              {!grouped && !isGame && (
+              {!grouped && (
                 <span className="chat-author">
                   {m.nickname}
                   <ClientBadge platform={platform} />
                 </span>
               )}
               {isGame ? (
-                <GameInviteText nickname={m.nickname} game={m.game} />
+                <GameInviteText game={m.game} />
               ) : (
                 <span className="chat-text">{m.text}</span>
               )}

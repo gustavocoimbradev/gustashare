@@ -2,9 +2,11 @@ import React from 'react';
 import useSpeaking from '../lib/useSpeaking.js';
 import { userColorStyle } from '../lib/userColor.js';
 import ClientBadge from './ClientBadge.jsx';
+import MicBadge from './MicBadge.jsx';
 
 function ParticipantRow({ nickname, isSelf, userId, platform, micStream }) {
   const speaking = useSpeaking(micStream);
+  const micOn = Boolean(micStream);
 
   return (
     <div className={`participant-row ${speaking ? 'speaking' : ''}`} style={userColorStyle(userId)}>
@@ -13,7 +15,10 @@ function ParticipantRow({ nickname, isSelf, userId, platform, micStream }) {
         {nickname}
         {isSelf ? ' (você)' : ''}
       </span>
-      <ClientBadge platform={platform} />
+      <span className="participant-badges">
+        <ClientBadge platform={platform} />
+        <MicBadge on={micOn} />
+      </span>
     </div>
   );
 }

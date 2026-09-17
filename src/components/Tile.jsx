@@ -4,6 +4,7 @@ import useSpeaking from '../lib/useSpeaking.js';
 import { userColorStyle } from '../lib/userColor.js';
 import Tooltip from './Tooltip.jsx';
 import ClientBadge from './ClientBadge.jsx';
+import MicBadge from './MicBadge.jsx';
 
 export default function Tile({ nickname, isSelf, userId, platform, screenStream, camStream, micStream, cameraPosition }) {
   const videoRef = useRef(null);
@@ -103,6 +104,7 @@ export default function Tile({ nickname, isSelf, userId, platform, screenStream,
           {isSelf ? ' (você)' : ''}
         </span>
         <ClientBadge platform={platform} />
+        <MicBadge on={Boolean(micStream)} />
       </div>
 
       {!isSelf && silent && !hover && (
