@@ -16,6 +16,8 @@ export default function Tile({ nickname, isSelf, userId, platform, screenStream,
   const [muted, setMuted] = useState(false);
   const [hover, setHover] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
+  const [pipReady, setPipReady] = useState(false);
   const speaking = useSpeaking(micStream);
 
   const mainStream = screenStream || camStream;
@@ -23,17 +25,27 @@ export default function Tile({ nickname, isSelf, userId, platform, screenStream,
   const silent = muted || volume === 0;
 
   useEffect(() => {
+    setVideoReady(false);
     const video = videoRef.current;
-    if (!video) return;
+    if (!video) return undefined;
     video.srcObject = mainStream || null;
-    if (mainStream) video.play().catch(() => {});
+    if (!mainStream) return undefined;
+    const onPlaying = () => setVideoReady(true);
+    video.addEventListener('playing', onPlaying);
+    video.play().catch(() => {});
+    return () => video.removeEventListener('playing', onPlaying);
   }, [mainStream]);
 
   useEffect(() => {
+    setPipReady(false);
     const video = pipRef.current;
-    if (!video) return;
+    if (!video) return undefined;
     video.srcObject = showPip ? camStream : null;
-    if (showPip && camStream) video.play().catch(() => {});
+    if (!showPip || !camStream) return undefined;
+    const onPlaying = () => setPipReady(true);
+    video.addEventListener('playing', onPlaying);
+    video.play().catch(() => {});
+    return () => video.removeEventListener('playing', onPlaying);
   }, [showPip, camStream]);
 
   useEffect(() => {
@@ -137,14 +149,19 @@ export default function Tile({ nickname, isSelf, userId, platform, screenStream,
       onMouseLeave={() => setHover(false)}
     >
       <div ref={stageRef} className={`tile-stage ${expanded ? 'expanded' : ''}`}>
+        <div className="avatar">{nickname.slice(0, 2).toUpperCase()}</div>
         {mainStream ? (
-          <video ref={videoRef} autoPlay playsInline muted={isSelf || silent} />
-        ) : (
-          <div className="avatar">{nickname.slice(0, 2).toUpperCase()}</div>
-        )}
+          <video
+            ref={videoRef}
+            className={videoReady ? '' : 'is-pending'}
+            autoPlay
+            playsInline
+            muted={isSelf || silent}
+          />
+        ) : null}
 
         {showPip && (
-          <div className="pip-cam">
+          <div className={`pip-cam ${pipReady ? '' : 'is-pending'}`}>
             <video ref={pipRef} autoPlay playsInline muted={isSelf} />
           </div>
         )}

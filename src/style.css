@@ -127,6 +127,22 @@ input:focus {
   z-index: 30;
 }
 
+.tooltip-bubble.tooltip-portal {
+  position: fixed;
+  bottom: auto;
+  left: 0;
+  top: 0;
+  transform: none;
+  z-index: 200;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.tooltip-bubble.tooltip-portal.placed {
+  opacity: 1;
+  visibility: visible;
+}
+
 .tooltip-bubble::after {
   content: '';
   position: absolute;
@@ -137,7 +153,19 @@ input:focus {
   border-top-color: #22262f;
 }
 
-.tooltip-wrap:hover .tooltip-bubble {
+.tooltip-bubble.tooltip-portal::after {
+  left: var(--arrow-left, 50%);
+  transform: translateX(-50%);
+}
+
+.tooltip-bubble.tooltip-portal.below::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: #22262f;
+}
+
+.tooltip-wrap:hover .tooltip-bubble:not(.tooltip-portal) {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
@@ -494,7 +522,10 @@ input:focus {
 .tile-stage {
   position: absolute;
   inset: 0;
-  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
 }
 
 .tile-stage:fullscreen,
@@ -515,10 +546,20 @@ input:focus {
 }
 
 .tile video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
   background: #000;
+}
+
+.tile-stage video.is-pending {
+  opacity: 0;
+}
+
+.pip-cam.is-pending {
+  opacity: 0;
 }
 
 .pip-cam {
