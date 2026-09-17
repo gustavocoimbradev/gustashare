@@ -60,22 +60,27 @@ export default function Chat({ messages, onSend, selfId, roster, className, onCl
       <div className="chat-messages" ref={listRef}>
         {messages.map((m, i) => {
           const isGame = Boolean(m.game?.url);
-          const grouped = !isGame && i > 0 && messages[i - 1].id === m.id && !messages[i - 1].game;
+          const isEvent = m.event === 'join' || m.event === 'leave';
+          const grouped = !isGame && !isEvent && i > 0 && messages[i - 1].id === m.id && !messages[i - 1].game && !messages[i - 1].event;
           const platform = m.platform || roster?.find((p) => p.id === m.id)?.platform;
           return (
             <div
               key={i}
-              className={`chat-message ${m.id === selfId ? 'own' : ''} ${grouped ? 'grouped' : ''}`}
+              className={`chat-message ${m.id === selfId ? 'own' : ''} ${grouped ? 'grouped' : ''} ${isEvent ? 'event' : ''}`}
               style={userColorStyle(m.id)}
             >
               {!grouped && (
                 <span className="chat-author">
-                  {m.nickname}
+                  {m.nickname || 'Alguém'}
                   <ClientBadge platform={platform} />
                 </span>
               )}
               {isGame ? (
                 <GameInviteText game={m.game} />
+              ) : isEvent ? (
+                <span className="chat-text">
+                  {m.event === 'join' ? 'entrou na sala' : 'saiu da sala'}
+                </span>
               ) : (
                 <span className="chat-text">{m.text}</span>
               )}

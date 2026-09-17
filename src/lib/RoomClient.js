@@ -196,20 +196,23 @@ export default class RoomClient extends EventTarget {
     } catch {
       // já fechou
     }
+    const left = this.roster.find((m) => m.id === peerId) || { id: peerId };
     this.roster = this.roster.filter((m) => m.id !== peerId);
     this._broadcastRoster();
     this.emit('roster', this.roster);
-    this.emit('peer-left', peerId);
+    this.emit('peer-left', left);
   }
 
   _closeCallsWith(peerId) {
     for (const key of [...this.outgoingCalls.keys()]) {
       if (!key.startsWith(`${peerId}:`)) continue;
+      const call = this.outgoingCalls.get(key);
       try {
-        this.outgoingCalls.get(key)?.close();
+        call?.close();
       } catch {
         // ignore
       }
+      this._stopClonedStream(call?._clonedStream);
       this.outgoingCalls.delete(key);
     }
   }
@@ -317,7 +320,8 @@ export default class RoomClient extends EventTarget {
   }
 
   _applyRoster(roster) {
-    const prevIds = new Set(this.roster.map((m) => m.id));
+    const prevRoster = this.roster;
+    const prevIds = new Set(prevRoster.map((m) => m.id));
     const currentIds = new Set(roster.map((m) => m.id));
     const wasInitialized = this._rosterInitialized;
     this._rosterInitialized = true;
@@ -334,40 +338,133 @@ export default class RoomClient extends EventTarget {
       }
     }
     for (const id of prevIds) {
-      if (!currentIds.has(id)) this.emit('peer-left', id);
+      if (currentIds.has(id)) continue;
+      const left = prevRoster.find((m) => m.id === id) || { id };
+      this.emit('peer-left', left);
     }
   }
 
   _setupCommonPeerHandlers() {
     this.peer.on('call', (call) => {
-      call.answer();
-      call.on('stream', (stream) => {
+      const deliver = (stream) => {
+        if (!stream) return;
         this.emit('stream', { peerId: call.peer, type: call.metadata?.type, stream });
+      };
+      call.on('stream', (stream) => {
+        deliver(stream);
+        stream.getVideoTracks?.().forEach((track) => {
+          track.addEventListener('unmute', () => deliver(stream));
+        });
       });
+      if (call.open && call.remoteStream) deliver(call.remoteStream);
+      call.answer();
       call.on('close', () => {
+        this.emit('stream-removed', { peerId: call.peer, type: call.metadata?.type });
+      });
+      call.on('error', () => {
         this.emit('stream-removed', { peerId: call.peer, type: call.metadata?.type });
       });
     });
   }
 
   _callPeerWithActiveStreams(peerId) {
-    for (const type of ['screen', 'cam', 'mic']) {
-      const stream = this.localStreams[type];
-      if (stream) this._callPeer(peerId, type, stream);
-    }
+    if (!peerId || peerId === this.peer?.id) return;
+    ['screen', 'cam', 'mic'].forEach((type, i) => {
+      if (!this.localStreams[type]) return;
+      setTimeout(() => {
+        if (this.stopped) return;
+        const stream = this.localStreams[type];
+        if (stream) this._callPeer(peerId, type, stream);
+      }, 280 + i * 220);
+    });
   }
 
-  _callPeer(peerId, type, stream) {
-    if (type === 'screen') prepareScreenTrack(stream);
-    const call = this.peer.call(peerId, stream, { metadata: { type } });
-    if (!call) return;
-    this.outgoingCalls.set(`${peerId}:${type}`, call);
-    if (type === 'screen') {
-      const tune = () => tuneScreenSender(call);
-      queueMicrotask(tune);
-      setTimeout(tune, 250);
-      setTimeout(tune, 1200);
+  _callPeer(peerId, type, stream, attempt = 0) {
+    if (this.stopped || !this.peer || peerId === this.peer.id) return;
+    if (!stream || stream.getTracks().every((t) => t.readyState === 'ended')) return;
+
+    const key = `${peerId}:${type}`;
+    const prev = this.outgoingCalls.get(key);
+    if (prev) {
+      try {
+        prev.close();
+      } catch {
+        // ignore
+      }
+      this._stopClonedStream(prev._clonedStream);
+      this.outgoingCalls.delete(key);
     }
+
+    let cloned = stream;
+    try {
+      cloned = stream.clone();
+    } catch {
+      cloned = stream;
+    }
+    if (type === 'screen') prepareScreenTrack(cloned);
+
+    const call = this.peer.call(peerId, cloned, { metadata: { type } });
+    if (!call) {
+      if (cloned !== stream) this._stopClonedStream(cloned);
+      this._retryCall(peerId, type, attempt);
+      return;
+    }
+
+    call._clonedStream = cloned === stream ? null : cloned;
+    this.outgoingCalls.set(key, call);
+
+    const retryIfDead = () => {
+      if (this.stopped || this.outgoingCalls.get(key) !== call) return;
+      this.outgoingCalls.delete(key);
+      this._stopClonedStream(call._clonedStream);
+      this._retryCall(peerId, type, attempt);
+    };
+
+    call.on('error', retryIfDead);
+    call.on('close', () => {
+      if (this.outgoingCalls.get(key) !== call) return;
+      this._stopClonedStream(call._clonedStream);
+      this.outgoingCalls.delete(key);
+    });
+
+    const tune = () => {
+      if (this.outgoingCalls.get(key) !== call) return;
+      if (type === 'screen') tuneScreenSender(call);
+    };
+    setTimeout(tune, 400);
+    setTimeout(tune, 1600);
+
+    setTimeout(() => {
+      if (this.stopped || this.outgoingCalls.get(key) !== call) return;
+      const pc = call.peerConnection;
+      const ice = pc?.iceConnectionState;
+      if (ice && ice !== 'connected' && ice !== 'completed' && ice !== 'checking') {
+        try {
+          call.close();
+        } catch {
+          // ignore
+        }
+        retryIfDead();
+      }
+    }, 3500);
+  }
+
+  _retryCall(peerId, type, attempt) {
+    if (attempt >= 4 || this.stopped) return;
+    const stream = this.localStreams[type];
+    if (!stream) return;
+    setTimeout(() => this._callPeer(peerId, type, stream, attempt + 1), 500 * (attempt + 1));
+  }
+
+  _stopClonedStream(stream) {
+    if (!stream) return;
+    stream.getTracks().forEach((t) => {
+      try {
+        t.stop();
+      } catch {
+        // ignore
+      }
+    });
   }
 
   // ----- Reeleicao de host -----
@@ -376,10 +473,11 @@ export default class RoomClient extends EventTarget {
     if (this.stopped || this._reconnecting) return;
     this._reconnecting = true;
     const hostGone = this.hostId;
-    if (this.roster.some((m) => m.id === hostGone)) {
+    const hostMember = this.roster.find((m) => m.id === hostGone);
+    if (hostMember) {
       this.roster = this.roster.filter((m) => m.id !== hostGone);
       this.emit('roster', this.roster);
-      this.emit('peer-left', hostGone);
+      this.emit('peer-left', hostMember);
     }
     const others = this.roster.filter((m) => m.id !== this.peer.id).map((m) => m.id);
     const candidates = [this.peer.id, ...others].sort();
@@ -505,7 +603,12 @@ export default class RoomClient extends EventTarget {
       const key = `${m.id}:${type}`;
       const oldCall = this.outgoingCalls.get(key);
       if (oldCall) {
-        oldCall.close();
+        try {
+          oldCall.close();
+        } catch {
+          // ignore
+        }
+        this._stopClonedStream(oldCall._clonedStream);
         this.outgoingCalls.delete(key);
       }
       if (stream) this._callPeer(m.id, type, stream);

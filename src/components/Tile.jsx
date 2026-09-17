@@ -23,15 +23,24 @@ export default function Tile({ nickname, isSelf, userId, platform, screenStream,
   const silent = muted || volume === 0;
 
   useEffect(() => {
-    if (videoRef.current) videoRef.current.srcObject = mainStream || null;
+    const video = videoRef.current;
+    if (!video) return;
+    video.srcObject = mainStream || null;
+    if (mainStream) video.play().catch(() => {});
   }, [mainStream]);
 
   useEffect(() => {
-    if (pipRef.current) pipRef.current.srcObject = showPip ? camStream : null;
+    const video = pipRef.current;
+    if (!video) return;
+    video.srcObject = showPip ? camStream : null;
+    if (showPip && camStream) video.play().catch(() => {});
   }, [showPip, camStream]);
 
   useEffect(() => {
-    if (audioRef.current) audioRef.current.srcObject = micStream || null;
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.srcObject = micStream || null;
+    if (micStream) audio.play().catch(() => {});
   }, [micStream]);
 
   useEffect(() => {
@@ -135,13 +144,9 @@ export default function Tile({ nickname, isSelf, userId, platform, screenStream,
         )}
 
         {showPip && (
-          <video
-            ref={pipRef}
-            autoPlay
-            playsInline
-            muted={isSelf}
-            className="pip-cam"
-          />
+          <div className="pip-cam">
+            <video ref={pipRef} autoPlay playsInline muted={isSelf} />
+          </div>
         )}
 
         {expanded && (

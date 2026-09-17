@@ -23,7 +23,6 @@ export const SCREEN_DISPLAY_MEDIA = {
 
 const SCREEN_MAX_BITRATE = 8_000_000;
 const SCREEN_MAX_FPS = 30;
-const CODEC_PREF = ['video/AV1', 'video/VP9', 'video/H264', 'video/VP8'];
 
 export function prepareScreenTrack(stream) {
   const track = stream?.getVideoTracks?.()[0];
@@ -43,20 +42,6 @@ export function prepareScreenTrack(stream) {
 export async function tuneScreenSender(call) {
   const pc = call?.peerConnection;
   if (!pc) return;
-
-  try {
-    const caps = RTCRtpSender.getCapabilities?.('video');
-    if (caps?.codecs?.length) {
-      const ranked = [...caps.codecs].sort((a, b) => codecRank(a.mimeType) - codecRank(b.mimeType));
-      for (const transceiver of pc.getTransceivers()) {
-        if (transceiver.sender?.track?.kind === 'video' && transceiver.setCodecPreferences) {
-          transceiver.setCodecPreferences(ranked);
-        }
-      }
-    }
-  } catch {
-    // setCodecPreferences nem sempre está disponível
-  }
 
   const sender = pc.getSenders().find((s) => s.track?.kind === 'video');
   if (!sender) return;
@@ -84,9 +69,4 @@ export async function tuneScreenSender(call) {
   } catch {
     // alguns browsers recusam encodings vazios no começo da call
   }
-}
-
-function codecRank(mime) {
-  const i = CODEC_PREF.findIndex((m) => m.toLowerCase() === String(mime || '').toLowerCase());
-  return i === -1 ? 99 : i;
 }

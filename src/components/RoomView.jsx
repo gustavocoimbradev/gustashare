@@ -55,18 +55,42 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
       });
     });
 
-    client.addEventListener('peer-joined', () => {
+    client.addEventListener('peer-joined', (e) => {
       playJoinSound();
+      const member = e.detail;
+      if (!member?.id || member.id === client.peer?.id) return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: member.id,
+          nickname: member.nickname,
+          platform: member.platform,
+          event: 'join',
+          ts: Date.now(),
+        },
+      ]);
     });
 
     client.addEventListener('peer-left', (e) => {
       playLeaveSound();
-      const peerId = e.detail;
+      const member = typeof e.detail === 'object' && e.detail ? e.detail : { id: e.detail };
+      const peerId = member.id;
       setStreams((prev) => {
         const next = { ...prev };
         delete next[peerId];
         return next;
       });
+      if (!peerId || peerId === client.peer?.id) return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: peerId,
+          nickname: member.nickname,
+          platform: member.platform,
+          event: 'leave',
+          ts: Date.now(),
+        },
+      ]);
     });
 
     client.addEventListener('self-stream', (e) => {
