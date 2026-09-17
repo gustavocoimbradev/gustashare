@@ -107,7 +107,7 @@ impl GraphicsCaptureApiHandler for Capturer {
         let mut buffer = frame.buffer()?;
         let raw = buffer.as_raw_buffer();
 
-        const mut out = pack_rgba_frame(raw, width, height);
+        let out = pack_rgba_frame(raw, width, height);
 
         self.callback
             .call(Ok(out.into()), ThreadsafeFunctionCallMode::NonBlocking);
