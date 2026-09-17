@@ -7,7 +7,7 @@ Há duas formas de usar:
 - **Desktop (Windows)**: app Electron (`.exe` portátil) — tela, câmera, microfone, chat.
 - **Web**: o mesmo app em `https://gustashare.vercel.app` — assistir e chat. Convites (`/room/CODIGO`) abrem direto no navegador.
 
-## Como funciona
+## Como funciona 
 
 - Não existe backend rodando na nuvem. O único componente externo é o
   broker público e gratuito do [PeerJS](https://peerjs.com/) (`0.peerjs.com`),
