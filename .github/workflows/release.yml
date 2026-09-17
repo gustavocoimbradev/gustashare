@@ -1,12 +1,10 @@
 name: Build and release GustaShare
 
-# So dispara quando package.json muda (ou seja, quando "npm run publish"
-# bumpou a versao) — evita rodar em todo push sem necessidade.
+# So dispara manualmente (aba Actions -> Run workflow). "npm run publish"
+# so bumpa a versao e faz o push do codigo; o build/release fica por sua
+# conta, quando quiser.
 on:
-  push:
-    branches: [main]
-    paths:
-      - package.json
+  workflow_dispatch:
 
 permissions:
   contents: write

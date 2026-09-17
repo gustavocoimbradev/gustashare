@@ -65,12 +65,13 @@ npm run publish
 
 Isso bumpa a versão (patch) em `package.json` automaticamente e roda
 `git add . && git pull && git commit -m "publish" && git push`. Só isso —
-não builda nada localmente.
+não builda nada localmente nem dispara nada sozinho.
 
-O push (por mudar `package.json`) dispara o workflow
-`.github/workflows/release.yml`, que builda o `.exe` num runner Windows,
-publica como GitHub Release na tag `v<versão>`, e commita de volta
-`update-server/latest.json` apontando pra essa release (com `[skip ci]`
-pra não disparar o workflow de novo). Esse segundo push aciona o deploy
-automático na Vercel, atualizando `latest.json` publicado — e o
-auto-updater do app passa a enxergar a nova versão.
+Quando quiser gerar o `.exe` de verdade, vai em **Actions** no GitHub e
+roda manualmente o workflow **Build and release GustaShare** (botão "Run
+workflow"). Ele builda o `.exe` num runner Windows, publica como GitHub
+Release na tag `v<versão>`, e commita de volta `update-server/latest.json`
+apontando pra essa release (com `[skip ci]` pra não disparar o workflow de
+novo). Esse segundo push aciona o deploy automático na Vercel, atualizando
+`latest.json` publicado — e o auto-updater do app passa a enxergar a nova
+versão.
