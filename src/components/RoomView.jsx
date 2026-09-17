@@ -7,6 +7,7 @@ import ParticipantsSidebar from './ParticipantsSidebar.jsx';
 import Dock from './Dock.jsx';
 import CameraPositionModal from './CameraPositionModal.jsx';
 import { playJoinSound, playLeaveSound } from '../lib/sounds.js';
+import { captureWindowNative } from '../lib/nativeCapture.js';
 
 export default function RoomView({ nickname, roomCode }) {
   const clientRef = useRef(null);
@@ -21,6 +22,8 @@ export default function RoomView({ nickname, roomCode }) {
   const [messages, setMessages] = useState([]);
   const [cameraPositions, setCameraPositions] = useState({});
   const [positionPromptOpen, setPositionPromptOpen] = useState(false);
+  const [screenSources, setScreenSources] = useState(null);
+  const nativeCaptureRef = useRef(null);
 
   useEffect(() => {
     window.gustashare?.setWindowMode('room');
@@ -103,20 +106,53 @@ export default function RoomView({ nickname, roomCode }) {
   }, [camOn, screenOn]);
 
   const toggleScreen = useCallback(async () => {
-    const next = !screenOn;
-    if (!next) {
+    if (screenOn) {
+      nativeCaptureRef.current?.stop();
+      nativeCaptureRef.current = null;
       await clientRef.current.setScreen(false);
       setScreenOn(false);
       return;
     }
+    const sources = await window.gustashare.listScreenSources();
+    setScreenSources(sources);
+  }, [screenOn]);
+
+  async function confirmScreenSource(choice) {
+    setScreenSources(null);
+
+    // Janela específica: tenta o módulo de captura nativo primeiro (vídeo
+    // sem tela preta + áudio isolado do processo, quando disponível).
+    // Sem isso, cai pro caminho normal (getDisplayMedia), que pra janelas
+    // funciona só o vídeo, sem áudio — limitação do Chromium.
+    if (!choice.isScreen && choice.hwnd) {
+      const available = await window.gustashare.nativeCaptureAvailable().catch(() => false);
+      if (available) {
+        try {
+          const capture = await captureWindowNative({ hwnd: choice.hwnd, wantsAudio: choice.shareAudio });
+          nativeCaptureRef.current = capture;
+          clientRef.current.setScreenFromStream(capture.stream);
+          setScreenOn(true);
+          if (camOn) setPositionPromptOpen(true);
+          return;
+        } catch (err) {
+          console.error('Captura nativa falhou, caindo pro getDisplayMedia:', err);
+        }
+      }
+    }
+
+    window.gustashare.setScreenPickerChoice(choice);
     try {
-      await clientRef.current.setScreen(true);
+      await clientRef.current.setScreen(true, choice);
       setScreenOn(true);
       if (camOn) setPositionPromptOpen(true);
     } catch {
-      // usuário cancelou o seletor de tela
+      // usuário cancelou no diálogo nativo, ou a captura falhou
     }
-  }, [screenOn, camOn]);
+  }
+
+  function cancelScreenSource() {
+    setScreenSources(null);
+  }
 
   function selectCameraPosition(position) {
     clientRef.current.sendCameraPosition(position);
@@ -129,7 +165,13 @@ export default function RoomView({ nickname, roomCode }) {
 
   return (
     <div className="room">
-      <ScreenPickerModal />
+      {screenSources && (
+        <ScreenPickerModal
+          sources={screenSources}
+          onConfirm={confirmScreenSource}
+          onCancel={cancelScreenSource}
+        />
+      )}
       {positionPromptOpen && (
         <CameraPositionModal
           onSelect={selectCameraPosition}

@@ -32,6 +32,14 @@ jobs:
         shell: pwsh
         run: echo "version=$(node -p "require('./package.json').version")" >> $env:GITHUB_OUTPUT
 
+      - name: Setup Rust (módulo nativo de captura)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Build módulo nativo (native/gustashare-capture)
+        run: npm run build-native
+
       - name: Build app (Windows real, sem wine)
         run: npm run build
 

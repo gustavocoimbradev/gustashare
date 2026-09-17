@@ -1,0 +1,27 @@
+[package]
+name = "gustashare-capture"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "2", default-features = false, features = ["napi6"] }
+napi-derive = "2"
+# windows-capture: wrapper ja pronto/testado pela comunidade em cima da
+# Windows.Graphics.Capture API — evita reimplementar na mao a parte mais
+# arriscada de acertar (pool de frames D3D11, threading, conversao de
+# textura pra buffer).
+windows-capture = "1"
+windows = { version = "0.58", features = [
+  "Win32_Foundation",
+  "Win32_Media_Audio",
+  "Win32_System_Com",
+  "Win32_System_Com_StructuredStorage",
+  "Win32_System_Threading",
+  "Win32_UI_WindowsAndMessaging",
+] }
+
+[build-dependencies]
+napi-build = "2"

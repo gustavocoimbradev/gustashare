@@ -1,23 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
-// So aparece quando o SO nao tem seletor nativo de compartilhamento de tela
-// (ver electron/main.js). Em Windows 10/11 modernos, o proprio Windows
-// mostra o dialogo — este componente e o fallback garantido.
-export default function ScreenPickerModal() {
-  const [sources, setSources] = useState(null);
-  const [selectedId, setSelectedId] = useState(null);
+function hwndFromSourceId(id) {
+  // Formato do Electron no Windows: "window:<hwnd>:0"
+  const match = /^window:(\d+):/.exec(id);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+export default function ScreenPickerModal({ sources, onConfirm, onCancel }) {
+  const [selectedId, setSelectedId] = useState(sources[0]?.id || null);
   const [shareAudio, setShareAudio] = useState(true);
-
-  useEffect(() => {
-    if (!window.gustashare?.onScreenPickerSources) return undefined;
-    return window.gustashare.onScreenPickerSources((list) => {
-      setSources(list);
-      setSelectedId(list[0]?.id || null);
-      setShareAudio(true);
-    });
-  }, []);
-
-  if (!sources) return null;
 
   const selected = sources.find((s) => s.id === selectedId);
   const isWindow = !!selected && !selected.isScreen;
@@ -26,18 +17,17 @@ export default function ScreenPickerModal() {
 
   function confirm() {
     if (!selectedId) return;
-    window.gustashare.chooseScreenSource({ id: selectedId, shareAudio: !isWindow && shareAudio });
-    setSources(null);
-  }
-
-  function cancel() {
-    window.gustashare.chooseScreenSource({ cancelled: true });
-    setSources(null);
+    onConfirm({
+      id: selectedId,
+      shareAudio,
+      isScreen: !isWindow,
+      hwnd: isWindow ? hwndFromSourceId(selectedId) : null,
+    });
   }
 
   return (
-    <div className="picker-backdrop">
-      <div className="picker">
+    <div className="picker-backdrop" onClick={onCancel}>
+      <div className="picker" onClick={(e) => e.stopPropagation()}>
         <h2>O que você quer compartilhar?</h2>
 
         <div className="picker-sources">
@@ -86,19 +76,12 @@ export default function ScreenPickerModal() {
         </div>
 
         <label className="picker-audio">
-          <input
-            type="checkbox"
-            checked={!isWindow && shareAudio}
-            disabled={isWindow}
-            onChange={(e) => setShareAudio(e.target.checked)}
-          />
-          {isWindow
-            ? 'Áudio isolado do app não é suportado nesta captura — só o vídeo será compartilhado'
-            : 'Compartilhar áudio do sistema'}
+          <input type="checkbox" checked={shareAudio} onChange={(e) => setShareAudio(e.target.checked)} />
+          {isWindow ? 'Compartilhar áudio do app (se disponível nesta máquina)' : 'Compartilhar áudio do sistema'}
         </label>
 
         <div className="picker-actions">
-          <button type="button" onClick={cancel}>
+          <button type="button" onClick={onCancel}>
             Cancelar
           </button>
           <button type="button" className="on" onClick={confirm} disabled={!selectedId}>

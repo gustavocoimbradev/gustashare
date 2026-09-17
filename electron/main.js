@@ -7,7 +7,23 @@ const ROOM_SIZE = { width: 1280, height: 820 };
 const PROTOCOL = 'gustashare';
 
 let pendingSources = [];
+let pendingChoice = null;
 let updating = false;
+
+// Módulo nativo (Windows) pra captura de janela específica sem os bugs
+// do Chromium — ver native/gustashare-capture/. Carrega de forma
+// resiliente: se não tiver sido buildado (ex: dev sem `npm run
+// build-native`), o app segue funcionando normalmente, só sem essa
+// captura alternativa.
+let nativeCapture = null;
+try {
+  nativeCapture = require('../native/gustashare-capture');
+} catch (err) {
+  console.warn('Módulo nativo de captura indisponível:', err.message);
+}
+
+const activeVideoCaptures = new Map();
+const activeAudioCaptures = new Map();
 
 // O Electron pode lançar uma exceção síncrona ao processar
 // setDisplayMediaRequestHandler quando o callback é chamado de forma
@@ -80,50 +96,32 @@ function createWindow() {
   });
 
   // No Windows 10/11 modernos, o proprio SO mostra o dialogo nativo de
-  // "compartilhar tela" (telas, janelas e, quando suportado, audio isolado
-  // por aplicativo) e o handler abaixo nem chega a ser chamado. Ele so roda
-  // como fallback (SO sem o seletor nativo), exibindo nosso proprio seletor
-  // dentro do app para garantir que sempre exista essa escolha.
+  // "compartilhar tela" e o handler abaixo nem chega a ser chamado. Ele so
+  // roda como fallback. Mas o nosso proprio seletor (ScreenPickerModal)
+  // sempre mostra ANTES de chamar getDisplayMedia — nao dentro dele —
+  // porque o renderer ja precisa saber, antes da chamada, exatamente que
+  // audio vai pedir (audio:true numa janela, que nunca tem audio, faz o
+  // Electron rejeitar o pedido inteiro, inclusive o video).
   session.defaultSession.setDisplayMediaRequestHandler(
     (request, callback) => {
-      desktopCapturer
-        .getSources({
-          types: ['screen', 'window'],
-          thumbnailSize: { width: 220, height: 138 },
-          fetchWindowIcons: true,
-        })
-        .then((sources) => {
-          pendingSources = sources;
-          win.webContents.send(
-            'screen-picker:sources',
-            sources.map((s) => ({
-              id: s.id,
-              name: s.name,
-              isScreen: s.id.startsWith('screen:'),
-              thumbnail: s.thumbnail.toDataURL(),
-              appIcon: s.appIcon ? s.appIcon.toDataURL() : null,
-            }))
-          );
-
-          ipcMain.once('screen-picker:choice', (_event, choice) => {
-            const source = !choice?.cancelled && pendingSources.find((s) => s.id === choice.id);
-            try {
-              if (!source) {
-                callback({});
-                return;
-              }
-              callback({
-                video: source,
-                audio: choice.shareAudio && source.id.startsWith('screen:') ? 'loopback' : undefined,
-              });
-            } catch (err) {
-              // Electron pode lançar uma exceção síncrona aqui ao negar o
-              // pedido (callback({})) de forma assíncrona — ver nota no
-              // topo do arquivo. Sem isso, vira um dialog de erro nativo.
-              console.error('Falha ao responder seletor de tela:', err);
-            }
-          });
+      const choice = pendingChoice;
+      pendingChoice = null;
+      try {
+        const source = choice && !choice.cancelled && pendingSources.find((s) => s.id === choice.id);
+        if (!source) {
+          callback({});
+          return;
+        }
+        callback({
+          video: source,
+          audio: choice.shareAudio && source.id.startsWith('screen:') ? 'loopback' : undefined,
         });
+      } catch (err) {
+        // Electron pode lançar uma exceção síncrona aqui ao negar o pedido
+        // (callback({})) — ver nota no topo do arquivo. Sem isso, vira um
+        // dialog de erro nativo.
+        console.error('Falha ao responder seletor de tela:', err);
+      }
     },
     { useSystemPicker: true }
   );
@@ -151,6 +149,83 @@ ipcMain.on('window:set-mode', (event, mode) => {
   win.setResizable(mode === 'room');
   win.setSize(size.width, size.height);
   win.center();
+});
+
+// O renderer busca a lista de fontes e escolhe ANTES de chamar
+// getDisplayMedia (ver comentário em createWindow) — esses dois handlers
+// só guardam esse estado pra setDisplayMediaRequestHandler usar.
+ipcMain.handle('screen-picker:list-sources', async () => {
+  const sources = await desktopCapturer.getSources({
+    types: ['screen', 'window'],
+    thumbnailSize: { width: 220, height: 138 },
+    fetchWindowIcons: true,
+  });
+  pendingSources = sources;
+  return sources.map((s) => ({
+    id: s.id,
+    name: s.name,
+    isScreen: s.id.startsWith('screen:'),
+    thumbnail: s.thumbnail.toDataURL(),
+    appIcon: s.appIcon ? s.appIcon.toDataURL() : null,
+  }));
+});
+
+ipcMain.on('screen-picker:set-choice', (_event, choice) => {
+  pendingChoice = choice;
+});
+
+// ----- Captura nativa (janela específica, com áudio isolado do processo) -----
+
+ipcMain.handle('native-capture:resolve-pid', (_event, hwnd) => {
+  if (!nativeCapture) return null;
+  try {
+    return nativeCapture.resolvePidFromHwnd(hwnd);
+  } catch (err) {
+    console.error('resolvePidFromHwnd falhou:', err);
+    return null;
+  }
+});
+
+ipcMain.handle('native-capture:available', () => !!nativeCapture);
+
+ipcMain.on('native-capture:start-video', (event, { id, hwnd }) => {
+  if (!nativeCapture) return;
+  const capture = new nativeCapture.VideoCapture();
+  activeVideoCaptures.set(id, capture);
+  capture.start(hwnd, (err, buffer) => {
+    if (err) {
+      console.error('captura de vídeo nativa:', err);
+      return;
+    }
+    if (!event.sender.isDestroyed()) {
+      event.sender.send(`native-capture:video-frame:${id}`, buffer);
+    }
+  });
+});
+
+ipcMain.on('native-capture:stop-video', (_event, id) => {
+  activeVideoCaptures.get(id)?.stop();
+  activeVideoCaptures.delete(id);
+});
+
+ipcMain.on('native-capture:start-audio', (event, { id, pid }) => {
+  if (!nativeCapture) return;
+  const capture = new nativeCapture.AudioCapture();
+  activeAudioCaptures.set(id, capture);
+  capture.start(pid, (err, buffer) => {
+    if (err) {
+      console.error('captura de áudio nativa:', err);
+      return;
+    }
+    if (!event.sender.isDestroyed()) {
+      event.sender.send(`native-capture:audio-chunk:${id}`, buffer);
+    }
+  });
+});
+
+ipcMain.on('native-capture:stop-audio', (_event, id) => {
+  activeAudioCaptures.get(id)?.stop();
+  activeAudioCaptures.delete(id);
 });
 
 // Só uma instância roda por vez: se o usuário clicar num link de convite

@@ -282,9 +282,21 @@ export default class RoomClient extends EventTarget {
 
   // ----- Midia local -----
 
-  async setScreen(on) {
+  // Usado quando a tela veio da captura nativa (native/gustashare-capture)
+  // em vez de getDisplayMedia — o stream já chega pronto.
+  setScreenFromStream(stream) {
+    this._setLocalStream('screen', stream);
+  }
+
+  // `choice` vem do nosso ScreenPickerModal (mostrado ANTES dessa chamada,
+  // via window.gustashare.listScreenSources/setScreenPickerChoice) — pedir
+  // audio:true quando a fonte é uma janela (que nunca tem áudio) faz o
+  // Electron rejeitar o pedido inteiro, então só pedimos o áudio que
+  // realmente vamos conseguir entregar.
+  async setScreen(on, choice) {
     if (on) {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      const wantsAudio = !!(choice && choice.shareAudio && choice.isScreen);
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: wantsAudio });
       stream.getVideoTracks()[0].addEventListener('ended', () => this.setScreen(false));
       this._setLocalStream('screen', stream);
     } else {

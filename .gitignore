@@ -3,3 +3,16 @@ dist
 release
 update-server/*.exe
 /.vercel
+
+# npm run build-local: gera o .exe direto na raiz, nunca deve ser commitado
+/*.exe
+/win-unpacked
+/builder-effective-config.yaml
+
+# módulo nativo (native/gustashare-capture): buildado fresco no CI a
+# cada vez, nada disso é versionado
+native/gustashare-capture/target
+native/gustashare-capture/node_modules
+native/gustashare-capture/*.node
+native/gustashare-capture/index.js
+native/gustashare-capture/index.d.ts

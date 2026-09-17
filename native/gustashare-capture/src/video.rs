@@ -1,0 +1,107 @@
+// Captura de video de uma janela via Windows.Graphics.Capture, usando a
+// crate `windows-capture` (ja lida com o pool de frames D3D11 e o
+// threading exigido pela WinRT por baixo dos panos).
+//
+// ATENCAO: a API exata da `windows-capture` muda entre versoes maiores.
+// Se o build falhar aqui, o erro do compilador aponta exatamente qual
+// metodo/assinatura mudou — checar https://docs.rs/windows-capture pra
+// versao instalada (`cargo tree -p windows-capture`) e ajustar.
+
+use napi::bindgen_prelude::Buffer;
+use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
+use napi::{Error, ErrorStrategy, Result};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
+use windows::Win32::Foundation::HWND;
+use windows::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId;
+
+use windows_capture::{
+    capture::{Context, GraphicsCaptureApiHandler},
+    frame::Frame,
+    graphics_capture_api::InternalCaptureControl,
+    settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings},
+    window::Window,
+};
+
+type FrameCallback = ThreadsafeFunction<Buffer, ErrorStrategy::CalleeHandled>;
+
+struct Capturer {
+    stop_flag: Arc<AtomicBool>,
+    callback: FrameCallback,
+}
+
+impl GraphicsCaptureApiHandler for Capturer {
+    type Flags = (Arc<AtomicBool>, FrameCallback);
+    type Error = Box<dyn std::error::Error + Send + Sync>;
+
+    fn new(context: Context<Self::Flags>) -> std::result::Result<Self, Self::Error> {
+        let (stop_flag, callback) = context.flags;
+        Ok(Self { stop_flag, callback })
+    }
+
+    fn on_frame_arrived(
+        &mut self,
+        frame: &mut Frame,
+        capture_control: InternalCaptureControl,
+    ) -> std::result::Result<(), Self::Error> {
+        if self.stop_flag.load(Ordering::SeqCst) {
+            capture_control.stop();
+            return Ok(());
+        }
+
+        let width = frame.width();
+        let height = frame.height();
+        let mut buffer = frame.buffer()?;
+        let raw = buffer.as_raw_buffer();
+
+        // Prefixa o buffer com width/height (u32 little-endian) pra não
+        // precisar de uma segunda mensagem/IPC só pra dimensão do frame.
+        let mut out = Vec::with_capacity(8 + raw.len());
+        out.extend_from_slice(&width.to_le_bytes());
+        out.extend_from_slice(&height.to_le_bytes());
+        out.extend_from_slice(raw);
+
+        self.callback
+            .call(Ok(out.into()), ThreadsafeFunctionCallMode::NonBlocking);
+
+        Ok(())
+    }
+
+    fn on_closed(&mut self) -> std::result::Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+pub fn run_capture(
+    hwnd: i64,
+    stop_flag: Arc<AtomicBool>,
+    callback: FrameCallback,
+) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let window = Window::from_raw_hwnd(HWND(hwnd as *mut _));
+
+    let settings = Settings::new(
+        window,
+        CursorCaptureSettings::WithoutCursor,
+        DrawBorderSettings::WithoutBorder,
+        ColorFormat::Bgra8,
+        (stop_flag, callback),
+    )?;
+
+    Capturer::start(settings)?;
+    Ok(())
+}
+
+pub fn pid_from_hwnd(hwnd: i64) -> Result<u32> {
+    let mut pid: u32 = 0;
+    unsafe {
+        let result = GetWindowThreadProcessId(HWND(hwnd as *mut _), Some(&mut pid));
+        if result == 0 {
+            return Err(Error::new(
+                napi::Status::GenericFailure,
+                "GetWindowThreadProcessId falhou".to_string(),
+            ));
+        }
+    }
+    Ok(pid)
+}
