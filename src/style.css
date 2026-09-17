@@ -407,7 +407,7 @@ input:focus {
 
 .connecting-overlay {
   position: absolute;
-  inset: 42px 0 0 0;
+  inset: 0;
   z-index: 60;
   display: flex;
   align-items: center;
