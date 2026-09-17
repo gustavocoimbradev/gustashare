@@ -7,11 +7,18 @@
       ]
     },
     {
-      "source": "/GustaShare-Portable.exe",
+      "source": "/GustaShare-Setup.exe",
       "headers": [
         { "key": "Cache-Control", "value": "no-store" },
         { "key": "Content-Type", "value": "application/octet-stream" }
       ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/GustaShare-Portable.exe",
+      "destination": "/GustaShare-Setup.exe",
+      "permanent": false
     }
   ],
   "rewrites": [

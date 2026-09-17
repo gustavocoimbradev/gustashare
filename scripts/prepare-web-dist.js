@@ -8,9 +8,9 @@ const https = require('node:https');
 const root = path.join(__dirname, '..');
 const dist = path.join(root, 'dist');
 const src = path.join(root, 'update-server', 'latest.json');
-const exeName = 'GustaShare-Portable.exe';
+const exeName = 'GustaShare-Setup.exe';
 const exeDest = path.join(dist, exeName);
-const EXE_URL = 'https://gustashare.vercel.app/GustaShare-Portable.exe';
+const EXE_URL = 'https://gustashare.vercel.app/GustaShare-Setup.exe';
 
 if (!fs.existsSync(dist)) {
   fs.mkdirSync(dist, { recursive: true });
@@ -53,7 +53,7 @@ function download(url, dest, redirectsLeft = 5) {
 
 async function keepExe() {
   if (fs.existsSync(exeDest) && fs.statSync(exeDest).size > 1_000_000) {
-    console.log('dist/GustaShare-Portable.exe já está no build');
+    console.log('dist/GustaShare-Setup.exe já está no build');
     return;
   }
   try {

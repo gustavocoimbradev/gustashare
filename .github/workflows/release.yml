@@ -56,24 +56,31 @@ jobs:
         run: |
           ls -lh release/GustaShare-Setup.exe
           cp release/GustaShare-Setup.exe dist/GustaShare-Setup.exe
-          cp release/GustaShare-Setup.exe dist/GustaShare-Portable.exe
-          ls -lh dist/GustaShare-Setup.exe dist/GustaShare-Portable.exe dist/latest.json
+          rm -f dist/GustaShare-Portable.exe
+          ls -lh dist/GustaShare-Setup.exe dist/latest.json
 
       - name: Deploy na Vercel
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         # Root Directory do painel tem que estar VAZIO (raiz do repo).
-        # Publicamos só o `dist/` (app web + latest.json + .exe) num
+        # Publicamos só o `dist/` (app web + latest.json + um .exe) num
         # staging, senão a CLI manda node_modules/target (~750MB).
+        # A Vercel recusa arquivo > 100MB — um único Setup.exe, sem cópia Portable.
         run: |
           ls -lh dist/GustaShare-Setup.exe dist/latest.json
+          size=$(stat -c%s dist/GustaShare-Setup.exe)
+          if [ "$size" -ge 104857600 ]; then
+            echo "GustaShare-Setup.exe tem $size bytes (>= 100MB). A Vercel Hobby recusa."
+            exit 1
+          fi
           staging="$(mktemp -d)"
           mkdir -p "$staging/.vercel"
           cp update-server/.vercel/project.json "$staging/.vercel/project.json"
           cp scripts/vercel-static.json "$staging/vercel.json"
           cp -r dist/. "$staging/"
-          ls -lh "$staging/GustaShare-Setup.exe" "$staging/GustaShare-Portable.exe"
+          rm -f "$staging/GustaShare-Portable.exe"
+          ls -lh "$staging/GustaShare-Setup.exe"
           cd "$staging"
           npx vercel deploy --prod --yes --token="$VERCEL_TOKEN"
 

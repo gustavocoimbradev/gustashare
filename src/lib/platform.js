@@ -3,7 +3,7 @@
 
 export const isDesktop = typeof window !== 'undefined' && Boolean(window.gustashare);
 
-export const DESKTOP_DOWNLOAD_URL = '/GustaShare-Portable.exe';
+export const DESKTOP_DOWNLOAD_URL = '/GustaShare-Setup.exe';
 
 export function parseInviteFromUrl() {
   if (typeof window === 'undefined' || isDesktop) return null;

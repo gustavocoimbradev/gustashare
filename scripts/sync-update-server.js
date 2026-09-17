@@ -1,19 +1,16 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-// O .exe e deployado direto na Vercel (via CLI, dentro do workflow do
-// GitHub Actions) — nunca passa pelo git, entao nunca esbarra no limite
-// de 100MB nem depende do repositorio ser publico. Este script so
-// escreve o latest.json apontando pra URL fixa do arquivo na Vercel;
-// o vercel.json na raiz desativa cache nesse arquivo, entao
-// cada deploy novo fica visivel na hora.
+// O .exe é deployado direto na Vercel (via CLI, no workflow do GitHub
+// Actions) — nunca passa pelo git. Um arquivo só (Setup), porque a
+// Vercel Hobby recusa arquivo > 100MB e duas cópias estouram o limite.
 const root = path.join(__dirname, '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const version = pkg.version;
 
 const manifest = {
   version,
-  url: 'https://gustashare.vercel.app/GustaShare-Portable.exe',
+  url: 'https://gustashare.vercel.app/GustaShare-Setup.exe',
   publishedAt: new Date().toISOString(),
 };
 

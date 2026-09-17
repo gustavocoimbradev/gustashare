@@ -29,3 +29,8 @@ windows-core = "0.58"
 
 [build-dependencies]
 napi-build = "2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

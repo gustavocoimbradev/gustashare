@@ -46,6 +46,7 @@
     "directories": {
       "output": "release"
     },
+    "compression": "maximum",
     "electronLanguages": [
       "pt-BR",
       "en-US"
@@ -56,6 +57,7 @@
     "nsis": {
       "oneClick": true,
       "perMachine": false,
+      "packElevateHelper": false,
       "allowElevation": false,
       "allowToChangeInstallationDirectory": false,
       "createDesktopShortcut": true,
