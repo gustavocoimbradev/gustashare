@@ -1,4 +1,5 @@
 import Peer from 'peerjs';
+import { isDesktop } from './platform.js';
 
 const HOST_PREFIX = 'gsh1_';
 
@@ -24,6 +25,7 @@ export default class RoomClient extends EventTarget {
   constructor(nickname, roomCode) {
     super();
     this.nickname = nickname;
+    this.platform = isDesktop ? 'desktop' : 'web';
     this.roomCode = roomCode;
     this.hostId = hostIdFor(roomCode);
     this.peer = null;
@@ -56,7 +58,7 @@ export default class RoomClient extends EventTarget {
         this.peer = hostPeer;
         this.isHost = true;
         this._setupHostPeer();
-        this.roster = [{ id: this.peer.id, nickname: this.nickname }];
+        this.roster = [this._selfMember()];
         this.emit('roster', this.roster);
         resolve();
       });
@@ -89,7 +91,7 @@ export default class RoomClient extends EventTarget {
     let firstDone = false;
 
     conn.on('open', () => {
-      conn.send({ type: 'hello', nickname: this.nickname });
+      conn.send({ type: 'hello', nickname: this.nickname, platform: this.platform });
     });
 
     conn.on('data', (data) => {
@@ -126,10 +128,10 @@ export default class RoomClient extends EventTarget {
     if (data.type === 'hello') {
       this.memberConns.set(conn.peer, conn);
       this.roster = this.roster.filter((m) => m.id !== conn.peer);
-      this.roster.push({ id: conn.peer, nickname: data.nickname });
+      this.roster.push(this._member(conn.peer, data.nickname, data.platform));
       this._broadcastRoster();
       this.emit('roster', this.roster);
-      this.emit('peer-joined', { id: conn.peer, nickname: data.nickname });
+      this.emit('peer-joined', this._member(conn.peer, data.nickname, data.platform));
       this._callPeerWithActiveStreams(conn.peer);
     } else if (data.type === 'chat') {
       this.emit('chat', data);
@@ -167,7 +169,14 @@ export default class RoomClient extends EventTarget {
   // ----- Chat -----
 
   sendChat(text) {
-    const msg = { type: 'chat', id: this.peer.id, nickname: this.nickname, text, ts: Date.now() };
+    const msg = {
+      type: 'chat',
+      id: this.peer.id,
+      nickname: this.nickname,
+      platform: this.platform,
+      text,
+      ts: Date.now(),
+    };
     this.emit('chat', msg);
     if (this.isHost) {
       this._broadcastChat(msg);
@@ -255,7 +264,7 @@ export default class RoomClient extends EventTarget {
       this.peer = hostPeer;
       this.isHost = true;
       this.memberConns = new Map();
-      this.roster = [{ id: this.peer.id, nickname: this.nickname }];
+      this.roster = [this._selfMember()];
       this._setupHostPeer();
       this.emit('roster', this.roster);
     });
@@ -278,6 +287,18 @@ export default class RoomClient extends EventTarget {
     peer.on('error', () => {
       setTimeout(() => this._retryJoin(), 800);
     });
+  }
+
+  _selfMember() {
+    return this._member(this.peer.id, this.nickname, this.platform);
+  }
+
+  _member(id, nickname, platform) {
+    return {
+      id,
+      nickname,
+      platform: platform === 'desktop' || platform === 'web' ? platform : null,
+    };
   }
 
   // ----- Midia local -----

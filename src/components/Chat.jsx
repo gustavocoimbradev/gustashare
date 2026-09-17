@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { SendHorizontal } from 'lucide-react';
+import { userColorStyle } from '../lib/userColor.js';
 
 export default function Chat({ messages, onSend, selfId }) {
   const [text, setText] = useState('');
@@ -24,7 +25,11 @@ export default function Chat({ messages, onSend, selfId }) {
         {messages.map((m, i) => {
           const grouped = i > 0 && messages[i - 1].id === m.id;
           return (
-            <div key={i} className={`chat-message ${m.id === selfId ? 'own' : ''} ${grouped ? 'grouped' : ''}`}>
+            <div
+              key={i}
+              className={`chat-message ${m.id === selfId ? 'own' : ''} ${grouped ? 'grouped' : ''}`}
+              style={userColorStyle(m.id)}
+            >
               {!grouped && <span className="chat-author">{m.nickname}</span>}
               <span className="chat-text">{m.text}</span>
             </div>

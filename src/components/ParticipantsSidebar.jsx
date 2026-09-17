@@ -1,11 +1,12 @@
 import React from 'react';
 import useSpeaking from '../lib/useSpeaking.js';
+import { userColorStyle } from '../lib/userColor.js';
 
-function ParticipantRow({ nickname, isSelf, micStream }) {
+function ParticipantRow({ nickname, isSelf, userId, micStream }) {
   const speaking = useSpeaking(micStream);
 
   return (
-    <div className={`participant-row ${speaking ? 'speaking' : ''}`}>
+    <div className={`participant-row ${speaking ? 'speaking' : ''}`} style={userColorStyle(userId)}>
       <span className="participant-dot" />
       <span className="participant-name">
         {nickname}
@@ -23,7 +24,15 @@ export default function ParticipantsSidebar({ roster, selfId, streams, selfStrea
         {roster.map((m) => {
           const isSelf = m.id === selfId;
           const micStream = isSelf ? selfStreams.mic : streams[m.id]?.mic;
-          return <ParticipantRow key={m.id} nickname={m.nickname} isSelf={isSelf} micStream={micStream} />;
+          return (
+            <ParticipantRow
+              key={m.id}
+              userId={m.id}
+              nickname={m.nickname}
+              isSelf={isSelf}
+              micStream={micStream}
+            />
+          );
         })}
       </div>
     </div>

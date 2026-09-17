@@ -3,7 +3,7 @@ import Home from './components/Home.jsx';
 import RoomView from './components/RoomView.jsx';
 import UpdateOverlay from './components/UpdateOverlay.jsx';
 import { saveSession, loadSession } from './lib/storage.js';
-import { parseInviteFromUrl, setRoomUrl } from './lib/platform.js';
+import { parseInviteFromUrl, setRoomUrl, clearRoomUrl } from './lib/platform.js';
 
 function sessionFromUrl() {
   const invite = parseInviteFromUrl();
@@ -16,7 +16,7 @@ function sessionFromUrl() {
 
 export default function App() {
   const [session, setSession] = useState(sessionFromUrl);
-  const [invite] = useState(() => parseInviteFromUrl());
+  const [invite, setInvite] = useState(() => parseInviteFromUrl());
 
   useEffect(() => {
     if (!window.gustashare?.onDeepLink) return undefined;
@@ -45,6 +45,11 @@ export default function App() {
           key={`${session.nickname}:${session.roomCode}`}
           nickname={session.nickname}
           roomCode={session.roomCode}
+          onLeave={() => {
+            clearRoomUrl();
+            setInvite(null);
+            setSession(null);
+          }}
         />
       )}
     </>

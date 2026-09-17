@@ -6,10 +6,11 @@ import ScreenPickerModal from './ScreenPickerModal.jsx';
 import ParticipantsSidebar from './ParticipantsSidebar.jsx';
 import Dock from './Dock.jsx';
 import CameraPositionModal from './CameraPositionModal.jsx';
+import { LogOut } from 'lucide-react';
 import { playJoinSound, playLeaveSound, playChatSound, playMediaOnSound, playMicOnSound, playMicOffSound } from '../lib/sounds.js';
 import { captureWindowNative } from '../lib/nativeCapture.js';
 
-export default function RoomView({ nickname, roomCode }) {
+export default function RoomView({ nickname, roomCode, onLeave }) {
   const clientRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [selfId, setSelfId] = useState(null);
@@ -23,6 +24,7 @@ export default function RoomView({ nickname, roomCode }) {
   const [cameraPositions, setCameraPositions] = useState({});
   const [positionPromptOpen, setPositionPromptOpen] = useState(false);
   const [screenSources, setScreenSources] = useState(null);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const nativeCaptureRef = useRef(null);
 
   useEffect(() => {
@@ -87,7 +89,11 @@ export default function RoomView({ nickname, roomCode }) {
       setReady(true);
     });
 
-    return () => client.leave();
+    return () => {
+      nativeCaptureRef.current?.stop();
+      nativeCaptureRef.current = null;
+      client.leave();
+    };
   }, [nickname, roomCode]);
 
   const toggleMic = useCallback(async () => {
@@ -221,6 +227,12 @@ export default function RoomView({ nickname, roomCode }) {
     clientRef.current.sendChat(text);
   }
 
+  function confirmLeave() {
+    nativeCaptureRef.current?.stop();
+    nativeCaptureRef.current = null;
+    onLeave?.();
+  }
+
   return (
     <div className="room">
       {screenSources && (
@@ -236,14 +248,41 @@ export default function RoomView({ nickname, roomCode }) {
           onClose={() => setPositionPromptOpen(false)}
         />
       )}
+      {leaveOpen && (
+        <div className="picker-backdrop" onClick={() => setLeaveOpen(false)}>
+          <div className="invite-box leave-box" onClick={(e) => e.stopPropagation()}>
+            <h2>Sair da sala?</h2>
+            <p className="invite-hint">Você volta pra tela inicial. Nickname e código da sala ficam preenchidos.</p>
+            <div className="picker-actions">
+              <button type="button" onClick={() => setLeaveOpen(false)}>
+                Cancelar
+              </button>
+              <button type="button" className="leave-confirm" onClick={confirmLeave}>
+                Sair
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="topbar">
         <div className="room-code">
           Sala: <strong>{roomCode}</strong>
         </div>
+        <button type="button" className="leave-btn" onClick={() => setLeaveOpen(true)}>
+          <LogOut size={15} />
+          Abandonar sala
+        </button>
       </div>
 
-      {!ready && <div className="connecting">Conectando…</div>}
+      {!ready && (
+        <div className="connecting-overlay">
+          <div className="connecting-box">
+            <div className="connecting-spinner" />
+            <h2>Acessando a sala</h2>
+          </div>
+        </div>
+      )}
 
       <div className="room-body">
         <ParticipantsSidebar roster={roster} selfId={selfId} streams={streams} selfStreams={selfStreams} />
@@ -256,6 +295,7 @@ export default function RoomView({ nickname, roomCode }) {
               return (
                 <Tile
                   key={m.id}
+                  userId={m.id}
                   nickname={m.nickname}
                   isSelf={isSelf}
                   screenStream={s.screen}

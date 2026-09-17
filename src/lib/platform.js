@@ -23,3 +23,9 @@ export function setRoomUrl(roomCode) {
   const method = alreadyInRoomPath ? 'replaceState' : 'pushState';
   window.history[method]({ roomCode }, '', path);
 }
+
+export function clearRoomUrl() {
+  if (isDesktop || typeof window === 'undefined') return;
+  if (window.location.pathname === '/' && !window.location.search) return;
+  window.history.pushState({}, '', '/');
+}
