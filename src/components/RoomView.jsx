@@ -6,7 +6,7 @@ import ScreenPickerModal from './ScreenPickerModal.jsx';
 import ParticipantsSidebar from './ParticipantsSidebar.jsx';
 import Dock from './Dock.jsx';
 import CameraPositionModal from './CameraPositionModal.jsx';
-import { playJoinSound, playLeaveSound } from '../lib/sounds.js';
+import { playJoinSound, playLeaveSound, playChatSound, playMediaOnSound, playMicOnSound, playMicOffSound } from '../lib/sounds.js';
 import { captureWindowNative } from '../lib/nativeCapture.js';
 
 export default function RoomView({ nickname, roomCode }) {
@@ -38,10 +38,13 @@ export default function RoomView({ nickname, roomCode }) {
     client.addEventListener('stream', (e) => {
       const { peerId, type, stream } = e.detail;
       setStreams((prev) => ({ ...prev, [peerId]: { ...prev[peerId], [type]: stream } }));
+      if (type === 'screen' || type === 'cam') playMediaOnSound();
+      else if (type === 'mic') playMicOnSound();
     });
 
     client.addEventListener('stream-removed', (e) => {
       const { peerId, type } = e.detail;
+      if (type === 'mic') playMicOffSound();
       setStreams((prev) => {
         const entry = { ...(prev[peerId] || {}) };
         delete entry[type];
@@ -70,6 +73,9 @@ export default function RoomView({ nickname, roomCode }) {
 
     client.addEventListener('chat', (e) => {
       setMessages((prev) => [...prev, e.detail]);
+      if (e.detail.id !== client.peer?.id) {
+        playChatSound();
+      }
     });
 
     client.addEventListener('camera-positions', (e) => {

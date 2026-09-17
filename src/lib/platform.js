@@ -14,3 +14,12 @@ export function parseInviteFromUrl() {
     from: new URLSearchParams(window.location.search).get('from') || '',
   };
 }
+
+export function setRoomUrl(roomCode) {
+  if (isDesktop || typeof window === 'undefined' || !roomCode) return;
+  const path = `/room/${encodeURIComponent(roomCode)}`;
+  if (window.location.pathname === path && !window.location.search) return;
+  const alreadyInRoomPath = /^\/room\//.test(window.location.pathname);
+  const method = alreadyInRoomPath ? 'replaceState' : 'pushState';
+  window.history[method]({ roomCode }, '', path);
+}

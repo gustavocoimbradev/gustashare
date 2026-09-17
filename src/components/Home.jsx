@@ -4,8 +4,9 @@ import { saveSession, loadSession } from '../lib/storage.js';
 import { isDesktop, DESKTOP_DOWNLOAD_URL } from '../lib/platform.js';
 
 export default function Home({ onJoin, invite }) {
-  const [nickname, setNickname] = useState('');
-  const [roomCode, setRoomCode] = useState('');
+  const saved = loadSession();
+  const [nickname, setNickname] = useState(saved.nickname);
+  const [roomCode, setRoomCode] = useState(invite?.roomCode || saved.roomCode || '');
 
   useEffect(() => {
     window.gustashare?.setWindowMode('home');

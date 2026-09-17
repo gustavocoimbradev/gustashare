@@ -1,39 +1,32 @@
 import React from 'react';
-import { Download } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import { DESKTOP_DOWNLOAD_URL } from '../lib/platform.js';
 
-const COPY = {
-  mic: {
-    title: 'Microfone só no desktop',
-    body: 'Na versão web você assiste e usa o chat. Ligar o microfone está disponível no GustaShare para Windows.',
-  },
-  cam: {
-    title: 'Câmera só no desktop',
-    body: 'Na versão web você assiste e usa o chat. Ligar a câmera está disponível no GustaShare para Windows.',
-  },
-  screen: {
-    title: 'Compartilhar tela só no desktop',
-    body: 'Na versão web você assiste e usa o chat. Compartilhar tela está disponível no GustaShare para Windows.',
-  },
+const TITLES = {
+  mic: 'Ligar microfone',
+  cam: 'Ligar câmera',
+  screen: 'Compartilhar tela',
 };
 
+const BODY = 'Esta funcionalidade está disponível apenas na versão desktop do GustaShare.';
+
 export default function DesktopOnlyDialog({ feature, onClose }) {
-  const copy = COPY[feature] || COPY.screen;
+  const title = TITLES[feature] || TITLES.screen;
 
   return (
     <div className="picker-backdrop" onClick={onClose}>
       <div className="invite-box desktop-only-box" onClick={(e) => e.stopPropagation()}>
-        <h2>{copy.title}</h2>
-        <p className="invite-hint">{copy.body}</p>
-        <div className="picker-actions desktop-only-actions">
-          <button type="button" onClick={onClose}>
-            Continuar assistindo
+        <div className="dialog-head">
+          <h2>{title}</h2>
+          <button type="button" className="dialog-close" onClick={onClose} aria-label="Fechar">
+            <X size={18} />
           </button>
-          <a className="desktop-download-btn" href={DESKTOP_DOWNLOAD_URL}>
-            <Download size={16} />
-            Baixar para Windows
-          </a>
         </div>
+        <p className="invite-hint">{BODY}</p>
+        <a className="desktop-download-btn" href={DESKTOP_DOWNLOAD_URL}>
+          <Download size={16} />
+          Baixar versão desktop
+        </a>
       </div>
     </div>
   );

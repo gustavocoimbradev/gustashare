@@ -2,11 +2,20 @@ import React, { useEffect, useState } from 'react';
 import Home from './components/Home.jsx';
 import RoomView from './components/RoomView.jsx';
 import UpdateOverlay from './components/UpdateOverlay.jsx';
-import { saveSession } from './lib/storage.js';
-import { parseInviteFromUrl } from './lib/platform.js';
+import { saveSession, loadSession } from './lib/storage.js';
+import { parseInviteFromUrl, setRoomUrl } from './lib/platform.js';
+
+function sessionFromUrl() {
+  const invite = parseInviteFromUrl();
+  const saved = loadSession();
+  const nickname = saved.nickname.trim();
+  if (!invite?.roomCode || !nickname) return null;
+  saveSession(nickname, invite.roomCode);
+  return { nickname, roomCode: invite.roomCode };
+}
 
 export default function App() {
-  const [session, setSession] = useState(null); // { nickname, roomCode }
+  const [session, setSession] = useState(sessionFromUrl);
   const [invite] = useState(() => parseInviteFromUrl());
 
   useEffect(() => {
@@ -18,6 +27,10 @@ export default function App() {
       setSession({ nickname: nick, roomCode });
     });
   }, []);
+
+  useEffect(() => {
+    if (session?.roomCode) setRoomUrl(session.roomCode);
+  }, [session]);
 
   return (
     <>
