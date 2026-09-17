@@ -1396,26 +1396,31 @@ input:focus {
 
 @media (max-width: 860px) {
   .home-main {
-    align-items: stretch;
-    justify-content: stretch;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 22px calc(24px + env(safe-area-inset-bottom, 0px));
   }
 
   .home-card {
-    max-width: none;
-    flex: 1;
-    min-height: 100%;
-    justify-content: space-between;
+    max-width: 340px;
+    flex: 0 0 auto;
+    min-height: 0;
+    justify-content: center;
     background: transparent;
     border: none;
     box-shadow: none;
     border-radius: 0;
-    padding: 32px 22px calc(28px + env(safe-area-inset-bottom, 0px));
-    gap: 28px;
+    padding: 0;
+    gap: 18px;
   }
 
   .home-card h1 {
     font-size: 34px;
-    margin: 8vh 0 0;
+    margin: 0 0 8px;
+  }
+
+  .home-download {
+    display: none;
   }
 
   .home-fields input,
@@ -1474,6 +1479,13 @@ input:focus {
   .participants.open,
   .chat.open {
     transform: translateY(0);
+  }
+
+  .participants-list,
+  .chat-messages {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .sheet-close {
