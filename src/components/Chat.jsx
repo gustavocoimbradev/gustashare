@@ -16,17 +16,17 @@ function GameInviteText({ nickname, game }) {
   return (
     <span className="chat-text">
       {nickname} convidou vocês para jogar{' '}
-      {!iconFailed && game?.domain ? (
-        <img
-          className="chat-game-icon"
-          src={faviconUrl(game.domain)}
-          alt=""
-          width={14}
-          height={14}
-          onError={() => setIconFailed(true)}
-        />
-      ) : null}
       <a className="chat-game-link" href={game.url} target="_blank" rel="noopener noreferrer" onClick={onGameClick}>
+        {!iconFailed && game?.domain ? (
+          <img
+            className="chat-game-icon"
+            src={faviconUrl(game.domain)}
+            alt=""
+            width={14}
+            height={14}
+            onError={() => setIconFailed(true)}
+          />
+        ) : null}
         {name}
       </a>
     </span>

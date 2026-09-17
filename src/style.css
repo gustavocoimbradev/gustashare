@@ -879,6 +879,9 @@ input:focus {
 }
 
 .chat-game-link {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
   color: var(--accent-2);
   font-weight: 700;
   text-decoration: underline;
