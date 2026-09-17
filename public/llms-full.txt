@@ -1,4 +1,4 @@
-# GustaShare — contexto completo para assistentes e motores generativos
+﻿# GustaShare — contexto completo para assistentes e motores generativos
 
 > GustaShare - Compartilhe sua tela gratuitamente.
 > Participe de chamadas em grupo, compartilhe sua tela, ligue sua câmera e converse com seus amigos de forma descomplicada e gratuita.

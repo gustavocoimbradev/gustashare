@@ -82,13 +82,13 @@ npm run publish
 ```
 
 Isso só roda `git add . && git pull && git commit -m "publish" && git push`.
-Não mexe em versão, não builda o `.exe`, não dispara o workflow de release.
+O push dispara o workflow **Build and release GustaShare**, que bumpa a
+versão e gera o `.exe`.
 
 ### Publicando uma nova versão (gerando o .exe)
 
-A versão só muda quando você realmente builda. Vai em **Actions** no
-GitHub e roda manualmente o workflow **Build and release GustaShare**
-(botão "Run workflow"). Ele:
+Cada push em `main`/`master` (ou o botão **Run workflow** em Actions)
+roda o build. Ele:
 1. Bumpa a versão (patch) em `package.json`.
 2. Builda o `.exe` num runner Windows real (sem wine).
 3. Publica `GustaShare-Setup.exe` num GitHub Release (`vX.Y.Z`, latest).

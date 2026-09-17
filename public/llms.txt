@@ -1,4 +1,4 @@
-# GustaShare
+﻿# GustaShare
 
 > GustaShare - Compartilhe sua tela gratuitamente.
 
