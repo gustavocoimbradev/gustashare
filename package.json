@@ -46,7 +46,6 @@
     "directories": {
       "output": "release"
     },
-    "publish": "never",
     "electronLanguages": [
       "pt-BR",
       "en-US"
