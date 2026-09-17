@@ -36,6 +36,10 @@
     "directories": {
       "output": "release"
     },
+    "electronLanguages": [
+      "pt-BR",
+      "en-US"
+    ],
     "win": {
       "target": "portable"
     },
