@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+Disallow: /latest.json
+
+Sitemap: https://gustashare.vercel.app/sitemap.xml

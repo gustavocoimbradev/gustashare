@@ -4,6 +4,7 @@ import RoomView from './components/RoomView.jsx';
 import UpdateOverlay from './components/UpdateOverlay.jsx';
 import { saveSession, loadSession } from './lib/storage.js';
 import { parseInviteFromUrl, setRoomUrl, clearRoomUrl } from './lib/platform.js';
+import { seoHome, seoRoom } from './lib/seo.js';
 
 function sessionFromUrl() {
   const invite = parseInviteFromUrl();
@@ -29,8 +30,17 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (session?.roomCode) setRoomUrl(session.roomCode);
-  }, [session]);
+    if (session?.roomCode) {
+      setRoomUrl(session.roomCode);
+      seoRoom(session.roomCode);
+      return;
+    }
+    if (invite?.roomCode) {
+      seoRoom(invite.roomCode);
+      return;
+    }
+    seoHome();
+  }, [session, invite]);
 
   return (
     <>
