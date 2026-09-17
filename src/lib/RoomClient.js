@@ -118,6 +118,7 @@ export default class RoomClient extends EventTarget {
     let firstDone = false;
 
     conn.on('open', () => {
+      this._reconnecting = false;
       conn.send({ type: 'hello', nickname: this.nickname, platform: this.platform });
       this._startHeartbeat();
       this._watchDisconnect(conn, () => {
@@ -195,7 +196,6 @@ export default class RoomClient extends EventTarget {
     } catch {
       // já fechou
     }
-    if (!inRoster && !conn) return;
     this.roster = this.roster.filter((m) => m.id !== peerId);
     this._broadcastRoster();
     this.emit('roster', this.roster);
@@ -373,6 +373,8 @@ export default class RoomClient extends EventTarget {
   // ----- Reeleicao de host -----
 
   _onHostLost() {
+    if (this.stopped || this._reconnecting) return;
+    this._reconnecting = true;
     const hostGone = this.hostId;
     if (this.roster.some((m) => m.id === hostGone)) {
       this.roster = this.roster.filter((m) => m.id !== hostGone);
@@ -393,8 +395,13 @@ export default class RoomClient extends EventTarget {
     this.peer.destroy();
     const hostPeer = new Peer(this.hostId, PEER_OPTIONS);
     hostPeer.on('open', () => {
+      if (this.stopped) {
+        hostPeer.destroy();
+        return;
+      }
       this.peer = hostPeer;
       this.isHost = true;
+      this._reconnecting = false;
       this.memberConns = new Map();
       this.roster = [this._selfMember()];
       this._setupHostPeer();
@@ -411,11 +418,15 @@ export default class RoomClient extends EventTarget {
     if (this.stopped) return;
     const peer = new Peer(PEER_OPTIONS);
     peer.on('open', () => {
-      this.peer = peer;
-      this.isHost = false;
-      this._setupCommonPeerHandlers();
-      this._connectToHost();
-    });
+        if (this.stopped) {
+          peer.destroy();
+          return;
+        }
+        this.peer = peer;
+        this.isHost = false;
+        this._setupCommonPeerHandlers();
+        this._connectToHost();
+      });
     peer.on('error', () => {
       setTimeout(() => this._retryJoin(), 800);
     });
