@@ -306,15 +306,16 @@ input:focus {
   background: #000;
 }
 
-.pip-cam {
+.tile video.pip-cam {
   position: absolute;
-  width: 30%;
-  max-width: 160px;
-  aspect-ratio: 4 / 3;
+  width: clamp(104px, 14%, 148px);
+  height: auto;
+  max-height: none;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
-  border-radius: var(--radius-sm);
-  border: 2px solid var(--surface);
-  box-shadow: var(--shadow-md);
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
   background: #000;
   z-index: 5;
 }

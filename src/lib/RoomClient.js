@@ -298,7 +298,7 @@ export default class RoomClient extends EventTarget {
       throw new Error('compartilhar tela só no desktop');
     }
     if (on) {
-      const wantsAudio = !!(choice && choice.shareAudio && choice.isScreen);
+      const wantsAudio = !!(choice && choice.shareAudio);
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: wantsAudio });
       stream.getVideoTracks()[0].addEventListener('ended', () => this.setScreen(false));
       this._setLocalStream('screen', stream);

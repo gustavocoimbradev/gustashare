@@ -73,6 +73,11 @@ function registerProtocolHandler() {
 
 const startupDeepLink = findDeepLinkArg(process.argv);
 
+function hwndFromSourceId(id) {
+  const match = /^window:(\d+):/.exec(id);
+  return match ? parseInt(match[1], 10) : null;
+}
+
 function createWindow() {
   const initialSize = startupDeepLink ? ROOM_SIZE : HOME_SIZE;
 
@@ -95,32 +100,38 @@ function createWindow() {
     if (updating) event.preventDefault();
   });
 
-  // No Windows 10/11 modernos, o proprio SO mostra o dialogo nativo de
-  // "compartilhar tela" e o handler abaixo nem chega a ser chamado. Ele so
-  // roda como fallback. Mas o nosso proprio seletor (ScreenPickerModal)
-  // sempre mostra ANTES de chamar getDisplayMedia — nao dentro dele —
-  // porque o renderer ja precisa saber, antes da chamada, exatamente que
-  // audio vai pedir (audio:true numa janela, que nunca tem audio, faz o
-  // Electron rejeitar o pedido inteiro, inclusive o video).
+  // Windows 10/11: o picker nativo do SO (janelas + telas + áudio).
+  // O handler só roda se o picker do sistema não estiver disponível.
   session.defaultSession.setDisplayMediaRequestHandler(
-    (request, callback) => {
-      const choice = pendingChoice;
-      pendingChoice = null;
+    async (request, callback) => {
       try {
-        const source = choice && !choice.cancelled && pendingSources.find((s) => s.id === choice.id);
-        if (!source) {
+        const choice = pendingChoice;
+        pendingChoice = null;
+        if (choice && !choice.cancelled) {
+          const source = pendingSources.find((s) => s.id === choice.id);
+          if (source) {
+            callback({
+              video: source,
+              audio: request.audioRequested ? 'loopback' : undefined,
+            });
+            return;
+          }
+        }
+        const sources = await desktopCapturer.getSources({
+          types: ['screen', 'window'],
+          thumbnailSize: { width: 0, height: 0 },
+        });
+        if (!sources[0]) {
           callback({});
           return;
         }
         callback({
-          video: source,
-          audio: choice.shareAudio && source.id.startsWith('screen:') ? 'loopback' : undefined,
+          video: sources[0],
+          audio: request.audioRequested ? 'loopback' : undefined,
         });
       } catch (err) {
-        // Electron pode lançar uma exceção síncrona aqui ao negar o pedido
-        // (callback({})) — ver nota no topo do arquivo. Sem isso, vira um
-        // dialog de erro nativo.
         console.error('Falha ao responder seletor de tela:', err);
+        callback({});
       }
     },
     { useSystemPicker: true }
@@ -172,6 +183,37 @@ ipcMain.handle('screen-picker:list-sources', async () => {
 
 ipcMain.on('screen-picker:set-choice', (_event, choice) => {
   pendingChoice = choice;
+});
+
+ipcMain.handle('screen-picker:find-source', async (_event, label) => {
+  const name = String(label || '').trim();
+  if (!name) return null;
+  const sources = await desktopCapturer.getSources({
+    types: ['screen', 'window'],
+    thumbnailSize: { width: 0, height: 0 },
+    fetchWindowIcons: false,
+  });
+  const lower = name.toLowerCase();
+  const scored = sources
+    .map((s) => {
+      const sourceName = s.name || '';
+      const sourceLower = sourceName.toLowerCase();
+      let score = 0;
+      if (sourceName === name) score = 3;
+      else if (sourceLower === lower) score = 2;
+      else if (sourceLower.includes(lower) || lower.includes(sourceLower)) score = 1;
+      return { s, score };
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score);
+  const source = scored[0]?.s;
+  if (!source) return null;
+  return {
+    id: source.id,
+    name: source.name,
+    isScreen: source.id.startsWith('screen:'),
+    hwnd: hwndFromSourceId(source.id),
+  };
 });
 
 // ----- Captura nativa (janela específica, com áudio isolado do processo) -----

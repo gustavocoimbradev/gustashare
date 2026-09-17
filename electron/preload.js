@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('gustashare', {
 
   listScreenSources: () => ipcRenderer.invoke('screen-picker:list-sources'),
   setScreenPickerChoice: (choice) => ipcRenderer.send('screen-picker:set-choice', choice),
+  findCaptureSource: (label) => ipcRenderer.invoke('screen-picker:find-source', label),
 
   onUpdateStatus: (callback) => {
     const listener = (_event, status) => callback(status);

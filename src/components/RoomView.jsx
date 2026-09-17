@@ -119,10 +119,61 @@ export default function RoomView({ nickname, roomCode }) {
       setScreenOn(false);
       return;
     }
-    const sources = await window.gustashare?.listScreenSources?.();
-    if (!sources) return;
-    setScreenSources(sources);
-  }, [screenOn]);
+
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true,
+        systemAudio: 'include',
+      });
+      await startShareFromDisplayMedia(stream);
+    } catch (err) {
+      if (err?.name === 'NotAllowedError' || err?.name === 'AbortError') return;
+      const sources = await window.gustashare?.listScreenSources?.();
+      if (sources?.length) setScreenSources(sources);
+    }
+  }, [screenOn, camOn]);
+
+  async function startShareFromDisplayMedia(stream) {
+    const videoTrack = stream.getVideoTracks()[0];
+    if (!videoTrack) {
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
+
+    const settings = videoTrack.getSettings?.() || {};
+    const looksLikeWindow = settings.displaySurface === 'window' || settings.displaySurface !== 'monitor';
+
+    if (looksLikeWindow && window.gustashare) {
+      const available = await window.gustashare.nativeCaptureAvailable?.().catch(() => false);
+      if (available) {
+        const info = await window.gustashare.findCaptureSource?.(videoTrack.label).catch(() => null);
+        if (info?.hwnd) {
+          try {
+            const capture = await captureWindowNative({ hwnd: info.hwnd, wantsAudio: true });
+            stream.getTracks().forEach((t) => t.stop());
+            nativeCaptureRef.current = capture;
+            clientRef.current.setScreenFromStream(capture.stream);
+            setScreenOn(true);
+            if (camOn) setPositionPromptOpen(true);
+            return;
+          } catch (err) {
+            console.error('Captura nativa falhou, usando o stream do picker:', err);
+          }
+        }
+      }
+    }
+
+    videoTrack.addEventListener('ended', () => {
+      nativeCaptureRef.current?.stop();
+      nativeCaptureRef.current = null;
+      clientRef.current?.setScreen(false);
+      setScreenOn(false);
+    });
+    clientRef.current.setScreenFromStream(stream);
+    setScreenOn(true);
+    if (camOn) setPositionPromptOpen(true);
+  }
 
   async function confirmScreenSource(choice) {
     setScreenSources(null);
