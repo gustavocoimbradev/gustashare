@@ -3,8 +3,6 @@ import { Mic, MicOff, Video, VideoOff, MonitorUp, MonitorX, Gamepad2, Share2 } f
 import Tooltip from './Tooltip.jsx';
 import InviteModal from './InviteModal.jsx';
 import GamesModal from './GamesModal.jsx';
-import DesktopOnlyDialog from './DesktopOnlyDialog.jsx';
-import { isDesktop } from '../lib/platform.js';
 
 export default function Dock({
   micOn,
@@ -19,25 +17,16 @@ export default function Dock({
 }) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [gamesOpen, setGamesOpen] = useState(false);
-  const [desktopOnly, setDesktopOnly] = useState(null);
 
   function handleMic() {
     onToggleMic();
   }
 
   function handleCam() {
-    if (!isDesktop) {
-      setDesktopOnly('cam');
-      return;
-    }
     onToggleCam();
   }
 
   function handleScreen() {
-    if (!isDesktop) {
-      setDesktopOnly('screen');
-      return;
-    }
     onToggleScreen();
   }
 
@@ -84,9 +73,6 @@ export default function Dock({
       )}
       {gamesOpen && (
         <GamesModal nickname={nickname} onInvite={onInviteGame} onClose={() => setGamesOpen(false)} />
-      )}
-      {desktopOnly && (
-        <DesktopOnlyDialog feature={desktopOnly} onClose={() => setDesktopOnly(null)} />
       )}
     </>
   );
