@@ -80,10 +80,9 @@ GitHub e roda manualmente o workflow **Build and release GustaShare**
 1. Bumpa a versão (patch) em `package.json`.
 2. Builda o `.exe` num runner Windows real (sem wine).
 3. Copia o `.exe` pra `update-server/` e atualiza `update-server/latest.json`.
-4. Faz `vercel deploy --prod` **na raiz do repo** (o Root Directory do
-   painel já é `update-server`; se rodar de dentro da pasta, a CLI
-   procura `update-server/update-server` e quebra). O `.exe` vai junto,
-   sem passar pelo git.
+4. Monta uma pasta temporária só com `update-server/` (site + `.exe`) e
+   faz `vercel deploy --prod` de lá. Assim o Root Directory do painel
+   resolve certo e a CLI não manda os 700MB+ de `node_modules`/build.
 5. Commita só `package.json` + `latest.json` de volta pro repo (o `.exe`
    fica de fora, com `[skip ci]` pra não disparar o workflow de novo).
 
