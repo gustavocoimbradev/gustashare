@@ -28,9 +28,9 @@ use windows::Win32::Media::Audio::{
     AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK, AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS,
     PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE, WAVEFORMATEX,
 };
-use windows::Win32::System::Com::CoInitializeEx;
-use windows::Win32::System::Ole::{PROPVARIANT, VT_BLOB};
+use windows::Win32::System::Com::{CoInitializeEx, PROPVARIANT};
 use windows::Win32::System::Threading::{CreateEventW, SetEvent, WaitForSingleObject};
+use windows::Win32::System::Variant::VT_BLOB;
 
 const VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK: &str = "VAD\\Process_Loopback";
 const SAMPLE_RATE: u32 = 48000;
@@ -45,7 +45,10 @@ struct CompletionHandler {
     ready: HANDLE,
 }
 
-impl IActivateAudioInterfaceCompletionHandler_Impl for CompletionHandler {
+// A crate `windows` gera um tipo wrapper `CompletionHandler_Impl` (nome
+// baseado no NOSSO struct, não no da interface) — é nele que a trait é
+// implementada, não no struct original.
+impl IActivateAudioInterfaceCompletionHandler_Impl for CompletionHandler_Impl {
     fn ActivateCompleted(
         &self,
         _activate_operation: Option<&IActivateAudioInterfaceAsyncOperation>,
