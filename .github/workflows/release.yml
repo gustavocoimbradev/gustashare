@@ -51,48 +51,28 @@ jobs:
       - name: Build web (base absoluta, pra Vercel)
         run: npm run build:web
 
-      - name: Publicar .exe no GitHub Release
+      - name: Copiar .exe pra pasta publicada
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v${{ steps.version.outputs.version }}"
-          exe="release/GustaShare-Portable.exe"
-          ls -lh "$exe"
-
-          upload() {
-            local i
-            for i in 1 2 3 4 5 6; do
-              if gh release upload "$tag" "$exe" --clobber; then
-                return 0
-              fi
-              echo "Upload falhou (tentativa $i), esperando pra tentar de novo..."
-              sleep $((i * 8))
-            done
-            return 1
-          }
-
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release $tag já existe, só enviando o .exe"
-          else
-            gh release create "$tag" --title "GustaShare $tag" --notes "GustaShare $tag" --latest
-          fi
-          upload
+          ls -lh release/GustaShare-Portable.exe
+          cp release/GustaShare-Portable.exe dist/GustaShare-Portable.exe
+          ls -lh dist/GustaShare-Portable.exe dist/latest.json
 
       - name: Deploy na Vercel
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         # Root Directory do painel tem que estar VAZIO (raiz do repo).
-        # Publicamos só o `dist/` (app web + latest.json) num staging.
-        # O .exe fica no GitHub Release; /GustaShare-Portable.exe redireciona.
+        # Publicamos só o `dist/` (app web + latest.json + .exe) num
+        # staging, senão a CLI manda node_modules/target (~750MB).
         run: |
-          ls -lh dist/latest.json
+          ls -lh dist/GustaShare-Portable.exe dist/latest.json
           staging="$(mktemp -d)"
           mkdir -p "$staging/.vercel"
           cp update-server/.vercel/project.json "$staging/.vercel/project.json"
           cp scripts/vercel-static.json "$staging/vercel.json"
           cp -r dist/. "$staging/"
+          ls -lh "$staging/GustaShare-Portable.exe"
           cd "$staging"
           npx vercel deploy --prod --yes --token="$VERCEL_TOKEN"
 

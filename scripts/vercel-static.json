@@ -5,13 +5,13 @@
       "headers": [
         { "key": "Cache-Control", "value": "no-store" }
       ]
-    }
-  ],
-  "redirects": [
+    },
     {
       "source": "/GustaShare-Portable.exe",
-      "destination": "https://github.com/gustavocoimbradev/gustashare/releases/latest/download/GustaShare-Portable.exe",
-      "permanent": false
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "Content-Type", "value": "application/octet-stream" }
+      ]
     }
   ],
   "rewrites": [
