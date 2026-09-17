@@ -869,6 +869,26 @@ input:focus {
   color: var(--user-color, var(--text-dim));
 }
 
+.chat-game-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  margin: 0 5px -2px 0;
+  vertical-align: middle;
+}
+
+.chat-game-link {
+  color: var(--accent-2);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chat-game-link:hover {
+  color: var(--text);
+}
+
 .chat-form {
   display: flex;
   gap: 6px;
@@ -1216,6 +1236,10 @@ input:focus {
   margin-top: 16px;
 }
 
+.games-box {
+  width: min(560px, 92vw);
+}
+
 .games-item {
   display: flex;
   align-items: center;
@@ -1225,15 +1249,27 @@ input:focus {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 11px 14px;
+  padding: 10px 12px;
   color: var(--text);
-  font-size: 14px;
-  font-weight: 600;
 }
 
-.games-item:hover {
-  background: #2c303a;
-  border-color: #3a3f4b;
+.games-item-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.games-item-actions button {
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.games-item-actions .on {
+  background: var(--accent-gradient);
+  box-shadow: 0 4px 14px rgba(74, 125, 255, 0.35);
 }
 
 .games-favicon {
@@ -1259,6 +1295,9 @@ input:focus {
 
 .games-item-name {
   min-width: 0;
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .desktop-download-btn {

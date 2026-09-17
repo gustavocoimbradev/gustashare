@@ -169,7 +169,7 @@ export default class RoomClient extends EventTarget {
 
   // ----- Chat -----
 
-  sendChat(text) {
+  sendChat(text, extra = {}) {
     const msg = {
       type: 'chat',
       id: this.peer.id,
@@ -177,6 +177,7 @@ export default class RoomClient extends EventTarget {
       platform: this.platform,
       text,
       ts: Date.now(),
+      ...extra,
     };
     this.emit('chat', msg);
     if (this.isHost) {

@@ -2,6 +2,36 @@ import React, { useEffect, useRef, useState } from 'react';
 import { SendHorizontal } from 'lucide-react';
 import { userColorStyle } from '../lib/userColor.js';
 import ClientBadge from './ClientBadge.jsx';
+import { faviconUrl, openGame } from '../lib/games.js';
+
+function GameInviteText({ nickname, game }) {
+  const [iconFailed, setIconFailed] = useState(false);
+  const name = game?.name || 'um jogo';
+
+  function onGameClick(e) {
+    e.preventDefault();
+    openGame(game.url);
+  }
+
+  return (
+    <span className="chat-text">
+      {nickname} convidou vocês para jogar{' '}
+      {!iconFailed && game?.domain ? (
+        <img
+          className="chat-game-icon"
+          src={faviconUrl(game.domain)}
+          alt=""
+          width={14}
+          height={14}
+          onError={() => setIconFailed(true)}
+        />
+      ) : null}
+      <a className="chat-game-link" href={game.url} target="_blank" rel="noopener noreferrer" onClick={onGameClick}>
+        {name}
+      </a>
+    </span>
+  );
+}
 
 export default function Chat({ messages, onSend, selfId, roster }) {
   const [text, setText] = useState('');
@@ -24,7 +54,8 @@ export default function Chat({ messages, onSend, selfId, roster }) {
       <div className="chat-title">Chat</div>
       <div className="chat-messages" ref={listRef}>
         {messages.map((m, i) => {
-          const grouped = i > 0 && messages[i - 1].id === m.id;
+          const isGame = Boolean(m.game?.url);
+          const grouped = !isGame && i > 0 && messages[i - 1].id === m.id && !messages[i - 1].game;
           const platform = m.platform || roster?.find((p) => p.id === m.id)?.platform;
           return (
             <div
@@ -32,13 +63,17 @@ export default function Chat({ messages, onSend, selfId, roster }) {
               className={`chat-message ${m.id === selfId ? 'own' : ''} ${grouped ? 'grouped' : ''}`}
               style={userColorStyle(m.id)}
             >
-              {!grouped && (
+              {!grouped && !isGame && (
                 <span className="chat-author">
                   {m.nickname}
                   <ClientBadge platform={platform} />
                 </span>
               )}
-              <span className="chat-text">{m.text}</span>
+              {isGame ? (
+                <GameInviteText nickname={m.nickname} game={m.game} />
+              ) : (
+                <span className="chat-text">{m.text}</span>
+              )}
             </div>
           );
         })}

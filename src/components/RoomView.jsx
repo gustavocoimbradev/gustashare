@@ -244,6 +244,12 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
     clientRef.current.sendChat(text);
   }
 
+  function inviteGame(_nick, game) {
+    clientRef.current.sendChat(`${nickname} convidou vocês para jogar ${game.name}`, {
+      game: { name: game.name, url: game.url, domain: game.domain },
+    });
+  }
+
   function confirmLeave() {
     nativeCaptureRef.current?.stop();
     nativeCaptureRef.current = null;
@@ -331,6 +337,8 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
             onToggleCam={toggleCam}
             onToggleScreen={toggleScreen}
             roomCode={roomCode}
+            nickname={nickname}
+            onInviteGame={inviteGame}
           />
         </div>
 
