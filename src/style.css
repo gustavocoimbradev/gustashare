@@ -70,15 +70,11 @@ button {
   color: var(--text);
   font-size: 14px;
   font-weight: 500;
-  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
 button:hover {
   background: #2c303a;
-}
-
-button:active {
-  transform: translateY(1px);
 }
 
 button.on {
@@ -246,9 +242,14 @@ input:focus {
   border-bottom: 1px solid var(--border);
 }
 
-.room-code {
-  font-size: 14px;
-  color: var(--text-dim);
+.brand {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .leave-btn {
@@ -269,17 +270,22 @@ input:focus {
   color: #fff;
 }
 
-.leave-box h2 {
-  margin: 0 0 6px;
+.leave-box .invite-hint {
+  margin-top: 8px;
+  line-height: 1.45;
 }
 
 .leave-confirm {
-  background: #b94a4a;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #c43b3b;
   color: #fff;
 }
 
 .leave-confirm:hover {
-  background: #c85a5a;
+  background: #d44545;
+  color: #fff;
 }
 
 .connecting-overlay {

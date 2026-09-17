@@ -33,9 +33,7 @@ export default function Home({ onJoin, invite }) {
       <form className="home-card" onSubmit={submit}>
         <h1>GustaShare</h1>
         {invite?.roomCode ? (
-          <p className="invite-banner">
-            Você foi convidado para a sala <strong>{invite.roomCode}</strong>
-          </p>
+          <p className="invite-banner">Você foi convidado para uma sala.</p>
         ) : null}
         <input
           placeholder="Seu nickname"
@@ -44,13 +42,14 @@ export default function Home({ onJoin, invite }) {
           maxLength={24}
           autoFocus
         />
-        <input
-          placeholder="Código da sala"
-          value={roomCode}
-          onChange={(e) => setRoomCode(e.target.value)}
-          maxLength={24}
-          readOnly={Boolean(invite?.roomCode)}
-        />
+        {!invite?.roomCode && (
+          <input
+            placeholder="Código da sala"
+            value={roomCode}
+            onChange={(e) => setRoomCode(e.target.value)}
+            maxLength={24}
+          />
+        )}
         <button type="submit">Entrar</button>
         <p className="hint">
           {invite?.roomCode
