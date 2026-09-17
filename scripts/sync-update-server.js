@@ -14,7 +14,9 @@ const version = pkg.version;
 
 const manifest = {
   version,
-  url: `https://github.com/${REPO}/releases/download/v${version}/GustaShare-Portable.exe`,
+  // "latest/download" sempre resolve pro asset da release mais recente,
+  // sem precisar bater com o nome exato da tag.
+  url: `https://github.com/${REPO}/releases/latest/download/GustaShare-Portable.exe`,
   publishedAt: new Date().toISOString(),
 };
 

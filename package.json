@@ -1,6 +1,6 @@
 {
   "name": "gustashare",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "private": true,
   "description": "Compartilhamento de tela P2P, sem servidor proprio",
   "main": "electron/main.js",
