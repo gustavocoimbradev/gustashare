@@ -162,7 +162,9 @@ export default function Tile({ nickname, isSelf, userId, platform, screenStream,
 
         {showPip && (
           <div className={`pip-cam ${pipReady ? '' : 'is-pending'}`}>
-            <video ref={pipRef} autoPlay playsInline muted={isSelf} />
+            <div className="pip-cam-mask">
+              <video ref={pipRef} autoPlay playsInline muted={isSelf} />
+            </div>
           </div>
         )}
 

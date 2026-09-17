@@ -568,8 +568,10 @@ input:focus {
   bottom: 10px;
   width: 80px;
   height: 80px;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   overflow: hidden;
+  isolation: isolate;
   border: 2px solid rgba(255, 255, 255, 0.9);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
   background: #000;
@@ -577,19 +579,36 @@ input:focus {
   pointer-events: none;
 }
 
+.pip-cam-mask {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  clip-path: circle(50% at 50% 50%);
+  -webkit-clip-path: circle(50% at 50% 50%);
+  -webkit-mask-image: radial-gradient(closest-side, #000 99.5%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 99.5%, transparent 100%);
+}
+
+.tile .pip-cam video,
 .pip-cam video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 50%;
   background: #000;
+  clip-path: circle(50% at 50% 50%);
+  -webkit-clip-path: circle(50% at 50% 50%);
 }
 
 .tile-stage:fullscreen .pip-cam,
 .tile-stage.expanded .pip-cam {
-  width: 16vmin;
-  height: 16vmin;
-  right: 3.5vmin;
-  bottom: 3.5vmin;
+  width: clamp(200px, 28vmin, 420px);
+  height: clamp(200px, 28vmin, 420px);
+  right: 4vmin;
+  bottom: 4vmin;
   border-width: 3px;
 }
 
@@ -600,10 +619,10 @@ input:focus {
 }
 
 .tile-stage:-webkit-full-screen .pip-cam {
-  width: 16vmin;
-  height: 16vmin;
-  right: 3.5vmin;
-  bottom: 3.5vmin;
+  width: clamp(200px, 28vmin, 420px);
+  height: clamp(200px, 28vmin, 420px);
+  right: 4vmin;
+  bottom: 4vmin;
   border-width: 3px;
 }
 
