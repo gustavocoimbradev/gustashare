@@ -12,7 +12,7 @@ Compartilhamento de tela em tempo real, ponto a ponto (P2P), sem servidor própr
   participantes (quem está na sala). O host é escolhido automaticamente
   (o primeiro a entrar com aquele código de sala). Se ele sair, outro
   participante assume esse papel sozinho — as conexões de mídia entre os
-  demais não são afetadas, então ninguém percebe a troca.
+  demais não são afetadas, então ninguém percebe a troca. 
 - Cada usuário compartilha sua própria tela/câmera/microfone usando a
   própria internet — ninguém depende da conexão de um único "servidor".
 
