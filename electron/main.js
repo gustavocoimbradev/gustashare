@@ -1,10 +1,12 @@
 const { app, BrowserWindow, session, desktopCapturer, ipcMain } = require('electron');
 const path = require('path');
+const { checkForUpdate } = require('./updater.js');
 
 const HOME_SIZE = { width: 440, height: 560 };
 const ROOM_SIZE = { width: 1280, height: 820 };
 
 let pendingSources = [];
+let updating = false;
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -18,6 +20,12 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  // Bloqueia o fechamento da janela enquanto a atualização estiver
+  // baixando/instalando, pra não deixar a troca do .exe pela metade.
+  win.on('close', (event) => {
+    if (updating) event.preventDefault();
   });
 
   // No Windows 10/11 modernos, o proprio SO mostra o dialogo nativo de
@@ -67,6 +75,12 @@ function createWindow() {
   } else {
     win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
   }
+
+  win.webContents.on('did-finish-load', () => {
+    checkForUpdate(win, (value) => {
+      updating = value;
+    });
+  });
 
   return win;
 }

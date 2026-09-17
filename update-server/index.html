@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>GustaShare — Update Server</title>
+    <style>
+      body {
+        background: #14161a;
+        color: #eceef1;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+      }
+      .box {
+        text-align: center;
+      }
+      code {
+        background: #1c1f25;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <h1>GustaShare — servidor de atualização</h1>
+      <p>Este projeto só serve <code>/latest.json</code> e o instalador portátil para o auto-updater do app.</p>
+      <p id="version">Verificando versão atual…</p>
+    </div>
+    <script>
+      fetch('/latest.json', { cache: 'no-store' })
+        .then((res) => res.json())
+        .then((data) => {
+          document.getElementById('version').textContent = `Versão atual: v${data.version}`;
+        })
+        .catch(() => {
+          document.getElementById('version').textContent = 'Não foi possível carregar a versão.';
+        });
+    </script>
+  </body>
+</html>

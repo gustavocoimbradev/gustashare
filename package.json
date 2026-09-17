@@ -1,12 +1,15 @@
 {
   "name": "gustashare",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "private": true,
   "description": "Compartilhamento de tela P2P, sem servidor proprio",
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
-    "build": "vite build && electron-builder --win portable"
+    "build": "vite build && electron-builder --win portable",
+    "bump-version": "node scripts/bump-version.js",
+    "sync-update-server": "node scripts/sync-update-server.js",
+    "publish": "npm run bump-version && npm run build && npm run sync-update-server && git add . && git pull && git commit -m \"publish\" && git push"
   },
   "dependencies": {
     "peerjs": "^1.5.4",

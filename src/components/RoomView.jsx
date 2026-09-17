@@ -4,7 +4,7 @@ import Tile from './Tile.jsx';
 import Chat from './Chat.jsx';
 import ScreenPickerModal from './ScreenPickerModal.jsx';
 
-export default function RoomView({ nickname, roomCode, onLeave }) {
+export default function RoomView({ nickname, roomCode }) {
   const clientRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [selfId, setSelfId] = useState(null);
@@ -101,11 +101,6 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
     }
   }, [screenOn]);
 
-  function leaveRoom() {
-    clientRef.current.leave();
-    onLeave();
-  }
-
   function sendChat(text) {
     clientRef.current.sendChat(text);
   }
@@ -127,9 +122,6 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
           </button>
           <button className={screenOn ? 'on' : ''} onClick={toggleScreen}>
             {screenOn ? '🛑 Parar tela' : '🖥️ Compartilhar tela'}
-          </button>
-          <button className="leave" onClick={leaveRoom}>
-            Sair
           </button>
         </div>
       </div>

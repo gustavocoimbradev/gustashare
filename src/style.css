@@ -33,14 +33,6 @@ button.on {
   background: #4a7dff;
 }
 
-button.leave {
-  background: #d9463f;
-}
-
-button.leave:hover {
-  background: #ef564e;
-}
-
 input {
   background: #1e2126;
   border: 1px solid #33363e;
@@ -343,4 +335,51 @@ input {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 18px;
+}
+
+/* Update overlay */
+
+.update-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 11, 13, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.update-box {
+  width: min(320px, 80vw);
+  text-align: center;
+}
+
+.update-title {
+  font-size: 15px;
+  margin-bottom: 14px;
+}
+
+.update-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: #2a2d34;
+  overflow: hidden;
+}
+
+.update-bar-fill {
+  height: 100%;
+  background: #4a7dff;
+  transition: width 0.2s ease;
+}
+
+.update-percent {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #8b8f99;
+}
+
+.update-hint {
+  margin-top: 14px;
+  font-size: 12px;
+  color: #8b8f99;
 }
