@@ -3,24 +3,29 @@
     {
       "source": "/latest.json",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store" }
-      ]
-    },
-    {
-      "source": "/GustaShare-Setup.exe",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-store" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
       ]
     }
   ],
   "redirects": [
     {
+      "source": "/GustaShare-Setup.exe",
+      "destination": "https://github.com/gustavocoimbradev/gustashare/releases/latest/download/GustaShare-Setup.exe",
+      "permanent": false
+    },
+    {
       "source": "/GustaShare-Portable.exe",
-      "destination": "/GustaShare-Setup.exe",
+      "destination": "https://github.com/gustavocoimbradev/gustashare/releases/latest/download/GustaShare-Setup.exe",
       "permanent": false
     }
   ],
   "rewrites": [
-    { "source": "/room/:code", "destination": "/room.html" }
+    {
+      "source": "/room/:code",
+      "destination": "/room.html"
+    }
   ]
 }
