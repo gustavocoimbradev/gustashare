@@ -1,6 +1,6 @@
 {
   "name": "gustashare",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "private": true,
   "description": "GustaShare",
   "main": "electron/main.js",
