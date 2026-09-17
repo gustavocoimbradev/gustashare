@@ -47,7 +47,6 @@ export default function GamesModal({ onClose }) {
             <X size={18} />
           </button>
         </div>
-        <p className="invite-hint">Abre numa nova aba. Compartilhe a tela se quiser jogar junto.</p>
         <div className="games-list">
           {GAMES.map((game) => (
             <button

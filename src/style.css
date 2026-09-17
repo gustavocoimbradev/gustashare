@@ -1209,11 +1209,6 @@ input:focus {
   line-height: 1.45;
 }
 
-.games-box .invite-hint {
-  margin-top: 8px;
-  line-height: 1.45;
-}
-
 .games-list {
   display: flex;
   flex-direction: column;
