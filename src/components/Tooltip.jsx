@@ -14,27 +14,20 @@ export default function Tooltip({ label, children }) {
     if (!open || !wrapRef.current || !bubbleRef.current) return;
 
     const wrap = wrapRef.current.getBoundingClientRect();
-    const bubble = bubbleRef.current.getBoundingClientRect();
-    const bw = bubble.width;
-    const bh = bubble.height;
+    const { width: bw, height: bh } = bubbleRef.current.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const centerX = wrap.left + wrap.width / 2;
-    const spaceAbove = wrap.top;
-    const spaceBelow = vh - wrap.bottom;
-    const below = spaceAbove < bh + GAP + PAD && spaceBelow > spaceAbove;
+    const canFitAbove = wrap.top - GAP - bh >= PAD;
+    const below = !canFitAbove && vh - wrap.bottom - GAP - bh >= PAD;
 
-    let top = below ? wrap.bottom + GAP : wrap.top - GAP;
+    let top = below ? wrap.bottom + GAP : wrap.top - GAP - bh;
+    top = Math.min(vh - PAD - bh, Math.max(PAD, top));
+
     let left = centerX - bw / 2;
     left = Math.min(vw - PAD - bw, Math.max(PAD, left));
 
-    if (!below) {
-      top = Math.max(PAD + bh, top);
-    } else {
-      top = Math.min(vh - PAD - bh, top);
-    }
-
-    const arrow = Math.min(bw - 12, Math.max(12, centerX - left));
+    const arrow = Math.min(bw - 10, Math.max(10, centerX - left));
     setCoords({ top, left, below, arrow });
   }, [open, label]);
 
