@@ -72,11 +72,8 @@ export default class RoomClient extends EventTarget {
       const hostPeer = new Peer(this.hostId, PEER_OPTIONS);
       let settled = false;
 
-      hostPeer.on('open', () => {
-        if (this.stopped) {
-          hostPeer.destroy();
-          return;
-        }
+      const settleHost = () => {
+        if (settled || this.stopped) return;
         settled = true;
         this.peer = hostPeer;
         this.isHost = true;
@@ -84,42 +81,94 @@ export default class RoomClient extends EventTarget {
         this.roster = [this._selfMember()];
         this.emit('roster', this.roster);
         resolve();
+      };
+
+      const settleMember = () => {
+        if (settled || this.stopped) return;
+        settled = true;
+        try {
+          hostPeer.destroy();
+        } catch {
+          // ignore
+        }
+        this._joinAsMember().then(resolve);
+      };
+
+      hostPeer.on('open', () => {
+        if (this.stopped) {
+          hostPeer.destroy();
+          return;
+        }
+        settleHost();
       });
 
       hostPeer.on('error', (err) => {
         if (settled) return;
-        if (err.type === 'unavailable-id') {
-          hostPeer.destroy();
-          this._joinAsMember().then(resolve);
-        }
+        if (err.type === 'unavailable-id') settleMember();
       });
+
+      setTimeout(() => {
+        if (settled || this.stopped) return;
+        settleMember();
+      }, 7000);
     });
   }
 
   _joinAsMember() {
     return new Promise((resolve) => {
       const peer = new Peer(PEER_OPTIONS);
+      let opened = false;
       peer.on('open', () => {
         if (this.stopped) {
           peer.destroy();
           return;
         }
+        opened = true;
         this.peer = peer;
         this.isHost = false;
         this._setupCommonPeerHandlers();
-        this._connectToHost(resolve);
+        this.roster = [this._selfMember()];
+        this.emit('roster', this.roster);
+        resolve();
+        this._connectToHost();
+      });
+      peer.on('error', () => {
+        if (opened || this.stopped) return;
+        setTimeout(() => this._joinAsMember().then(resolve), 900);
       });
     });
   }
 
-  _connectToHost(onFirstRoster) {
+  _connectToHost() {
+    if (this.stopped || this.isHost || !this.peer) return;
+    try {
+      this.hostConn?.close();
+    } catch {
+      // ignore
+    }
+    clearTimeout(this._hostWaitTimer);
     const conn = this.peer.connect(this.hostId, { reliable: true });
     this.hostConn = conn;
     let firstDone = false;
 
+    const sendHello = () => {
+      if (this.stopped || firstDone || this.isHost || !conn.open) return;
+      conn.send({ type: 'hello', nickname: this.nickname, platform: this.platform });
+    };
+
+    const finishJoin = () => {
+      if (firstDone) return;
+      firstDone = true;
+      clearInterval(conn._helloIv);
+      clearTimeout(this._hostWaitTimer);
+      this._announceMediaReady();
+    };
+
     conn.on('open', () => {
       this._reconnecting = false;
-      conn.send({ type: 'hello', nickname: this.nickname, platform: this.platform });
+      sendHello();
+      clearInterval(conn._helloIv);
+      conn._helloIv = setInterval(sendHello, 1000);
       this._startHeartbeat();
       this._watchDisconnect(conn, () => {
         if (!this.stopped) this._onHostLost();
@@ -131,11 +180,9 @@ export default class RoomClient extends EventTarget {
         this.cameraPositions = new Map(Object.entries(data.cameraPositions || {}));
         this.emit('camera-positions', Object.fromEntries(this.cameraPositions));
         this._applyRoster(data.roster);
-        if (!firstDone) {
-          firstDone = true;
-          if (onFirstRoster) onFirstRoster();
-          this._announceMediaReady();
-        }
+        const listed = data.roster?.some((m) => m.id === this.peer.id);
+        if (listed) finishJoin();
+        else sendHello();
       } else if (data.type === 'chat') {
         this.emit('chat', data);
       } else if (data.type === 'media-ready') {
@@ -143,19 +190,40 @@ export default class RoomClient extends EventTarget {
       }
     });
 
+    conn.on('error', () => {
+      if (this.stopped || firstDone) return;
+      setTimeout(() => {
+        if (!this.stopped && !this.isHost && !firstDone) this._onHostLost();
+      }, 400);
+    });
+
     conn.on('close', () => {
+      clearInterval(conn._helloIv);
       if (this.stopped) return;
       this._onHostLost();
     });
+
+    this._hostWaitTimer = setTimeout(() => {
+      if (this.stopped || firstDone || this.isHost) return;
+      this._onHostLost();
+    }, 5500);
   }
 
   _setupHostPeer() {
     this._setupCommonPeerHandlers();
     this._startHeartbeat();
     this.peer.on('connection', (conn) => {
+      conn.on('data', (data) => this._onHostData(conn, data));
       conn.on('open', () => {
-        conn.on('data', (data) => this._onHostData(conn, data));
+        this.memberConns.set(conn.peer, conn);
         this._watchDisconnect(conn, () => this._onMemberLeft(conn.peer));
+        if (conn.open) {
+          conn.send({
+            type: 'roster',
+            roster: this.roster,
+            cameraPositions: Object.fromEntries(this.cameraPositions),
+          });
+        }
       });
       conn.on('close', () => this._onMemberLeft(conn.peer));
       conn.on('error', () => this._onMemberLeft(conn.peer));
@@ -234,10 +302,8 @@ export default class RoomClient extends EventTarget {
       if (pc.connectionState === 'disconnected') {
         clearTimeout(conn._dropTimer);
         conn._dropTimer = setTimeout(() => {
-          if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-            fire();
-          }
-        }, 2000);
+          if (pc.connectionState === 'failed' || pc.connectionState === 'closed') fire();
+        }, 8000);
       } else {
         clearTimeout(conn._dropTimer);
       }
@@ -253,12 +319,15 @@ export default class RoomClient extends EventTarget {
       if (this.stopped) return;
       if (this.isHost) {
         this._pruneStaleMembers();
+        this._broadcastRoster();
       } else if (this.hostConn?.open) {
         try {
           this.hostConn.send({ type: 'ping' });
         } catch {
           // conexão já caiu
         }
+      } else if (!this._reconnecting) {
+        this._onHostLost();
       }
     }, 4000);
   }
@@ -270,9 +339,13 @@ export default class RoomClient extends EventTarget {
 
   _pruneStaleMembers() {
     const now = Date.now();
-    for (const peerId of [...this.memberConns.keys()]) {
+    for (const [peerId, conn] of this.memberConns) {
+      if (conn?.open) {
+        this._lastSeen.set(peerId, now);
+        continue;
+      }
       const seen = this._lastSeen.get(peerId) || 0;
-      if (now - seen > 10000) this._onMemberLeft(peerId);
+      if (now - seen > 20000) this._onMemberLeft(peerId);
     }
   }
 
@@ -370,6 +443,14 @@ export default class RoomClient extends EventTarget {
         this.emit('stream-removed', { peerId: call.peer, type: call.metadata?.type });
       });
     });
+    this.peer.on('disconnected', () => {
+      if (this.stopped) return;
+      try {
+        this.peer.reconnect();
+      } catch {
+        // ignore
+      }
+    });
   }
 
   _callPeerWithActiveStreams(peerId) {
@@ -447,7 +528,11 @@ export default class RoomClient extends EventTarget {
 
   _tryBecomeHost(attempt = 0) {
     if (this.stopped) return;
-    this.peer.destroy();
+    try {
+      this.peer?.destroy();
+    } catch {
+      // ignore
+    }
     const hostPeer = new Peer(this.hostId, PEER_OPTIONS);
     hostPeer.on('open', () => {
       if (this.stopped) {
@@ -463,7 +548,10 @@ export default class RoomClient extends EventTarget {
       this.emit('roster', this.roster);
     });
     hostPeer.on('error', (err) => {
-      if (err.type === 'unavailable-id' && attempt < 10) {
+      if (err.type === 'unavailable-id') {
+        this._reconnecting = false;
+        setTimeout(() => this._retryJoin(), 400);
+      } else if (attempt < 10) {
         setTimeout(() => this._tryBecomeHost(attempt + 1), 400);
       }
     });
@@ -471,17 +559,22 @@ export default class RoomClient extends EventTarget {
 
   _retryJoin() {
     if (this.stopped) return;
+    try {
+      this.peer?.destroy();
+    } catch {
+      // ignore
+    }
     const peer = new Peer(PEER_OPTIONS);
     peer.on('open', () => {
-        if (this.stopped) {
-          peer.destroy();
-          return;
-        }
-        this.peer = peer;
-        this.isHost = false;
-        this._setupCommonPeerHandlers();
-        this._connectToHost();
-      });
+      if (this.stopped) {
+        peer.destroy();
+        return;
+      }
+      this.peer = peer;
+      this.isHost = false;
+      this._setupCommonPeerHandlers();
+      this._connectToHost();
+    });
     peer.on('error', () => {
       setTimeout(() => this._retryJoin(), 800);
     });
@@ -578,6 +671,7 @@ export default class RoomClient extends EventTarget {
     this.stopped = true;
     this._unbindPageLeave();
     this._stopHeartbeat();
+    clearTimeout(this._hostWaitTimer);
     try {
       if (!this.isHost && this.hostConn?.open) {
         this.hostConn.send({ type: 'bye', id: this.peer?.id });
