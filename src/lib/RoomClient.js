@@ -34,6 +34,7 @@ export default class RoomClient extends EventTarget {
     this.outgoingCalls = new Map();
     this.localStreams = { screen: null, cam: null, mic: null };
     this.stopped = false;
+    this._rosterInitialized = false;
   }
 
   emit(name, detail) {
@@ -125,6 +126,7 @@ export default class RoomClient extends EventTarget {
       this.roster.push({ id: conn.peer, nickname: data.nickname });
       this._broadcastRoster();
       this.emit('roster', this.roster);
+      this.emit('peer-joined', { id: conn.peer, nickname: data.nickname });
       this._callPeerWithActiveStreams(conn.peer);
     } else if (data.type === 'chat') {
       this.emit('chat', data);
@@ -169,12 +171,17 @@ export default class RoomClient extends EventTarget {
   _applyRoster(roster) {
     const prevIds = new Set(this.roster.map((m) => m.id));
     const currentIds = new Set(roster.map((m) => m.id));
+    const wasInitialized = this._rosterInitialized;
+    this._rosterInitialized = true;
 
     this.roster = roster;
     this.emit('roster', this.roster);
 
     for (const m of roster) {
       if (m.id !== this.peer.id && !prevIds.has(m.id)) {
+        // No primeiro roster recebido (snapshot de quem já estava na sala),
+        // não é uma "entrada" de verdade — não toca som pra isso.
+        if (wasInitialized) this.emit('peer-joined', m);
         this._callPeerWithActiveStreams(m.id);
       }
     }

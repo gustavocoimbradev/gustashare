@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import useSpeaking from '../lib/useSpeaking.js';
 
 export default function Tile({ nickname, isSelf, screenStream, camStream, micStream }) {
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const [volume, setVolume] = useState(1);
   const [hover, setHover] = useState(false);
+  const speaking = useSpeaking(micStream);
 
   const videoStream = screenStream || camStream;
 
@@ -26,7 +28,11 @@ export default function Tile({ nickname, isSelf, screenStream, camStream, micStr
   }
 
   return (
-    <div className="tile" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+    <div
+      className={`tile ${speaking ? 'speaking' : ''}`}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
       {videoStream ? (
         <video ref={videoRef} autoPlay playsInline muted={isSelf} />
       ) : (

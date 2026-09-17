@@ -40,46 +40,48 @@ export default function ScreenPickerModal() {
       <div className="picker">
         <h2>O que você quer compartilhar?</h2>
 
-        {screens.length > 0 && (
-          <>
-            <div className="picker-section-title">Telas</div>
-            <div className="picker-grid">
-              {screens.map((s, i) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`picker-item ${selectedId === s.id ? 'selected' : ''}`}
-                  onClick={() => setSelectedId(s.id)}
-                >
-                  <img src={s.thumbnail} alt={s.name} />
-                  <span>{s.name || `Tela ${i + 1}`}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+        <div className="picker-sources">
+          {screens.length > 0 && (
+            <>
+              <div className="picker-section-title">Telas</div>
+              <div className="picker-grid">
+                {screens.map((s, i) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`picker-item ${selectedId === s.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedId(s.id)}
+                  >
+                    <img src={s.thumbnail} alt={s.name} />
+                    <span>{s.name || `Tela ${i + 1}`}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
 
-        {windows.length > 0 && (
-          <>
-            <div className="picker-section-title">Janelas / aplicativos</div>
-            <div className="picker-grid">
-              {windows.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`picker-item ${selectedId === s.id ? 'selected' : ''}`}
-                  onClick={() => setSelectedId(s.id)}
-                >
-                  <img src={s.thumbnail} alt={s.name} />
-                  <span>
-                    {s.appIcon && <img className="app-icon" src={s.appIcon} alt="" />}
-                    {s.name}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+          {windows.length > 0 && (
+            <>
+              <div className="picker-section-title">Janelas / aplicativos</div>
+              <div className="picker-grid">
+                {windows.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`picker-item ${selectedId === s.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedId(s.id)}
+                  >
+                    <img src={s.thumbnail} alt={s.name} />
+                    <span>
+                      {s.appIcon && <img className="app-icon" src={s.appIcon} alt="" />}
+                      {s.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
 
         <label className="picker-audio">
           <input

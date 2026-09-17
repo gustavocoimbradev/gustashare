@@ -8,6 +8,15 @@ const ROOM_SIZE = { width: 1280, height: 820 };
 let pendingSources = [];
 let updating = false;
 
+// O Electron pode lançar uma exceção síncrona ao processar
+// setDisplayMediaRequestHandler quando o callback é chamado de forma
+// assíncrona sem vídeo (ex: usuário cancelou o seletor de tela) — isso
+// vira um dialog nativo feio de "erro no processo principal". Evita isso
+// virar tela de erro pro usuário.
+process.on('uncaughtException', (err) => {
+  console.error('uncaughtException:', err);
+});
+
 function createWindow() {
   const win = new BrowserWindow({
     width: HOME_SIZE.width,
@@ -38,7 +47,7 @@ function createWindow() {
       desktopCapturer
         .getSources({
           types: ['screen', 'window'],
-          thumbnailSize: { width: 300, height: 200 },
+          thumbnailSize: { width: 220, height: 138 },
           fetchWindowIcons: true,
         })
         .then((sources) => {
@@ -56,14 +65,21 @@ function createWindow() {
 
           ipcMain.once('screen-picker:choice', (_event, choice) => {
             const source = !choice?.cancelled && pendingSources.find((s) => s.id === choice.id);
-            if (!source) {
-              callback({});
-              return;
+            try {
+              if (!source) {
+                callback({});
+                return;
+              }
+              callback({
+                video: source,
+                audio: choice.shareAudio && source.id.startsWith('screen:') ? 'loopback' : undefined,
+              });
+            } catch (err) {
+              // Electron pode lançar uma exceção síncrona aqui ao negar o
+              // pedido (callback({})) de forma assíncrona — ver nota no
+              // topo do arquivo. Sem isso, vira um dialog de erro nativo.
+              console.error('Falha ao responder seletor de tela:', err);
             }
-            callback({
-              video: source,
-              audio: choice.shareAudio && source.id.startsWith('screen:') ? 'loopback' : undefined,
-            });
           });
         });
     },

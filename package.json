@@ -1,6 +1,6 @@
 {
   "name": "gustashare",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "Compartilhamento de tela P2P, sem servidor proprio",
   "main": "electron/main.js",
@@ -12,6 +12,7 @@
     "publish": "npm run bump-version && npm run build && npm run sync-update-server && git add . && git pull && git commit -m \"publish\" && git push"
   },
   "dependencies": {
+    "lucide-react": "^1.47.0",
     "peerjs": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

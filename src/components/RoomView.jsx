@@ -3,6 +3,9 @@ import RoomClient from '../lib/RoomClient.js';
 import Tile from './Tile.jsx';
 import Chat from './Chat.jsx';
 import ScreenPickerModal from './ScreenPickerModal.jsx';
+import ParticipantsSidebar from './ParticipantsSidebar.jsx';
+import Dock from './Dock.jsx';
+import { playJoinSound, playLeaveSound } from '../lib/sounds.js';
 
 export default function RoomView({ nickname, roomCode }) {
   const clientRef = useRef(null);
@@ -40,7 +43,12 @@ export default function RoomView({ nickname, roomCode }) {
       });
     });
 
+    client.addEventListener('peer-joined', () => {
+      playJoinSound();
+    });
+
     client.addEventListener('peer-left', (e) => {
+      playLeaveSound();
       const peerId = e.detail;
       setStreams((prev) => {
         const next = { ...prev };
@@ -113,37 +121,39 @@ export default function RoomView({ nickname, roomCode }) {
         <div className="room-code">
           Sala: <strong>{roomCode}</strong>
         </div>
-        <div className="controls">
-          <button className={micOn ? 'on' : ''} onClick={toggleMic}>
-            {micOn ? '🎙️ Mic ligado' : '🎙️ Ligar mic'}
-          </button>
-          <button className={camOn ? 'on' : ''} onClick={toggleCam}>
-            {camOn ? '📷 Câmera ligada' : '📷 Ligar câmera'}
-          </button>
-          <button className={screenOn ? 'on' : ''} onClick={toggleScreen}>
-            {screenOn ? '🛑 Parar tela' : '🖥️ Compartilhar tela'}
-          </button>
-        </div>
       </div>
 
       {!ready && <div className="connecting">Conectando…</div>}
 
       <div className="room-body">
-        <div className="grid">
-          {roster.map((m) => {
-            const isSelf = m.id === selfId;
-            const s = isSelf ? selfStreams : streams[m.id] || {};
-            return (
-              <Tile
-                key={m.id}
-                nickname={m.nickname}
-                isSelf={isSelf}
-                screenStream={s.screen}
-                camStream={s.cam}
-                micStream={s.mic}
-              />
-            );
-          })}
+        <ParticipantsSidebar roster={roster} selfId={selfId} streams={streams} selfStreams={selfStreams} />
+
+        <div className="grid-wrap">
+          <div className="grid">
+            {roster.map((m) => {
+              const isSelf = m.id === selfId;
+              const s = isSelf ? selfStreams : streams[m.id] || {};
+              return (
+                <Tile
+                  key={m.id}
+                  nickname={m.nickname}
+                  isSelf={isSelf}
+                  screenStream={s.screen}
+                  camStream={s.cam}
+                  micStream={s.mic}
+                />
+              );
+            })}
+          </div>
+
+          <Dock
+            micOn={micOn}
+            camOn={camOn}
+            screenOn={screenOn}
+            onToggleMic={toggleMic}
+            onToggleCam={toggleCam}
+            onToggleScreen={toggleScreen}
+          />
         </div>
 
         <Chat messages={messages} onSend={sendChat} selfId={selfId} />
