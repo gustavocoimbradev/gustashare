@@ -36,7 +36,9 @@ export default function Home({ onJoin, invite }) {
         <form className="home-card" onSubmit={submit}>
         <h1>GustaShare</h1>
         {invite?.roomCode ? (
-          <p className="invite-banner">Você foi convidado para uma sala.</p>
+          <p className="invite-banner">
+            Você foi convidado para a sala <strong>{invite.roomCode}</strong>
+          </p>
         ) : null}
         <input
           placeholder="Seu nickname"
@@ -54,9 +56,6 @@ export default function Home({ onJoin, invite }) {
           />
         )}
         <button type="submit">Entrar</button>
-        {invite?.roomCode && (
-          <p className="hint">Entre com um nickname para assistir e usar o chat.</p>
-        )}
         {!isDesktop && (
           <a className="home-download" href={DESKTOP_DOWNLOAD_URL}>
             <Download size={14} />
