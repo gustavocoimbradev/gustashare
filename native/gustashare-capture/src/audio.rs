@@ -18,21 +18,21 @@
 use napi::bindgen_prelude::Buffer;
 use napi::threadsafe_function::{ErrorStrategy, ThreadsafeFunction, ThreadsafeFunctionCallMode};
 
-use windows::core::{implement, Interface, PCWSTR};
+use windows::core::{implement, Interface, PROPVARIANT};
 use windows::Win32::Foundation::{HANDLE, WAIT_OBJECT_0};
 use windows::Win32::Media::Audio::{
     ActivateAudioInterfaceAsync, IActivateAudioInterfaceAsyncOperation,
-    IActivateAudioInterfaceCompletionHandler,
+    IActivateAudioInterfaceCompletionHandler, IActivateAudioInterfaceCompletionHandler_Impl,
     IAudioCaptureClient, IAudioClient, AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
     AUDCLNT_STREAMFLAGS_LOOPBACK, AUDIOCLIENT_ACTIVATION_PARAMS, AUDIOCLIENT_ACTIVATION_PARAMS_0,
     AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK, AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS,
-    PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE, WAVEFORMATEX,
+    PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE, VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK,
+    WAVEFORMATEX,
 };
-use windows::Win32::System::Com::{CoInitializeEx, PROPVARIANT};
+use windows::Win32::System::Com::CoInitializeEx;
 use windows::Win32::System::Threading::{CreateEventW, SetEvent, WaitForSingleObject};
 use windows::Win32::System::Variant::VT_BLOB;
 
-const VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK: &str = "VAD\\Process_Loopback";
 const SAMPLE_RATE: u32 = 48000;
 const CHANNELS: u16 = 2;
 // mmreg.h: WAVE_FORMAT_IEEE_FLOAT = 3. Usamos o valor literal em vez de
@@ -82,22 +82,37 @@ pub fn run_capture(
             },
         };
 
-        let mut prop = PROPVARIANT::default();
-        set_propvariant_blob(&mut prop, &mut params);
+        // Em windows 0.58, PROPVARIANT e um wrapper em `windows::core` (nao
+        // mora mais em Win32::System::Com). O layout cru fica em
+        // `windows::core::imp` e o blob aponta pra `params` na stack —
+        // por isso ManuallyDrop: o Drop do wrapper chamaria
+        // PropVariantClear e tentaria CoTaskMemFree de memoria de stack.
+        let raw_prop = windows::core::imp::PROPVARIANT {
+            Anonymous: windows::core::imp::PROPVARIANT_0 {
+                Anonymous: windows::core::imp::PROPVARIANT_0_0 {
+                    vt: VT_BLOB.0,
+                    wReserved1: 0,
+                    wReserved2: 0,
+                    wReserved3: 0,
+                    Anonymous: windows::core::imp::PROPVARIANT_0_0_0 {
+                        blob: windows::core::imp::BLOB {
+                            cbSize: std::mem::size_of::<AUDIOCLIENT_ACTIVATION_PARAMS>() as u32,
+                            pBlobData: &mut params as *mut _ as *mut u8,
+                        },
+                    },
+                },
+            },
+        };
+        let activation_prop = std::mem::ManuallyDrop::new(PROPVARIANT::from_raw(raw_prop));
 
         let ready_event = CreateEventW(None, true, false, None)?;
         let handler: IActivateAudioInterfaceCompletionHandler =
             CompletionHandler { ready: ready_event }.into();
 
-        let device_id: Vec<u16> = VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK
-            .encode_utf16()
-            .chain(std::iter::once(0))
-            .collect();
-
         let operation = ActivateAudioInterfaceAsync(
-            PCWSTR(device_id.as_ptr()),
+            VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK,
             &IAudioClient::IID,
-            Some(&prop as *const _),
+            Some(&*activation_prop as *const _),
             &handler,
         )?;
 
@@ -121,7 +136,7 @@ pub fn run_capture(
 
         audio_client.Initialize(
             AUDCLNT_SHAREMODE_SHARED,
-            (AUDCLNT_STREAMFLAGS_LOOPBACK.0 as u32) | (AUDCLNT_STREAMFLAGS_EVENTCALLBACK.0 as u32),
+            AUDCLNT_STREAMFLAGS_LOOPBACK | AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
             10_000_000, // 1s de buffer, em unidades de 100ns
             0,
             &wave_format,
@@ -173,13 +188,4 @@ pub fn run_capture(
     }
 
     Ok(())
-}
-
-unsafe fn set_propvariant_blob(prop: &mut PROPVARIANT, params: &mut AUDIOCLIENT_ACTIVATION_PARAMS) {
-    // VT_BLOB apontando pra AUDIOCLIENT_ACTIVATION_PARAMS — replica o que
-    // o exemplo oficial da Microsoft (C++) faz manualmente.
-    prop.Anonymous.Anonymous.vt = VT_BLOB.0 as u16;
-    let blob = &mut prop.Anonymous.Anonymous.Anonymous.blob;
-    blob.cbSize = std::mem::size_of::<AUDIOCLIENT_ACTIVATION_PARAMS>() as u32;
-    blob.pBlobData = params as *mut _ as *mut u8;
 }

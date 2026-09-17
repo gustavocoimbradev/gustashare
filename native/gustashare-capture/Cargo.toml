@@ -13,7 +13,7 @@ napi-derive = "2"
 # Windows.Graphics.Capture API — evita reimplementar na mao a parte mais
 # arriscada de acertar (pool de frames D3D11, threading, conversao de
 # textura pra buffer).
-windows-capture = "1"
+windows-capture = "1.5"
 windows = { version = "0.58", features = [
   "implement",
   "Win32_Foundation",

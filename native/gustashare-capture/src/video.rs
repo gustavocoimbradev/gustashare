@@ -20,7 +20,10 @@ use windows_capture::{
     capture::{Context, GraphicsCaptureApiHandler},
     frame::Frame,
     graphics_capture_api::InternalCaptureControl,
-    settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings},
+    settings::{
+        ColorFormat, CursorCaptureSettings, DirtyRegionSettings, DrawBorderSettings,
+        MinimumUpdateIntervalSettings, SecondaryWindowSettings, Settings,
+    },
     window::Window,
 };
 
@@ -78,15 +81,18 @@ pub fn run_capture(
     stop_flag: Arc<AtomicBool>,
     callback: FrameCallback,
 ) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let window = Window::from_raw_hwnd(HWND(hwnd as *mut _));
+    let window = Window::from_raw_hwnd(hwnd as *mut std::ffi::c_void);
 
     let settings = Settings::new(
         window,
         CursorCaptureSettings::WithoutCursor,
         DrawBorderSettings::WithoutBorder,
+        SecondaryWindowSettings::Default,
+        MinimumUpdateIntervalSettings::Default,
+        DirtyRegionSettings::Default,
         ColorFormat::Bgra8,
         (stop_flag, callback),
-    )?;
+    );
 
     Capturer::start(settings)?;
     Ok(())
