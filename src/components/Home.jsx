@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
 import { saveSession, loadSession } from '../lib/storage.js';
 import { isDesktop, DESKTOP_DOWNLOAD_URL } from '../lib/platform.js';
+import TitleBar from './TitleBar.jsx';
 
 export default function Home({ onJoin, invite }) {
   const saved = loadSession();
@@ -30,7 +31,9 @@ export default function Home({ onJoin, invite }) {
 
   return (
     <div className="home">
-      <form className="home-card" onSubmit={submit}>
+      {isDesktop && <TitleBar canMaximize={false} />}
+      <div className="home-main">
+        <form className="home-card" onSubmit={submit}>
         <h1>GustaShare</h1>
         {invite?.roomCode ? (
           <p className="invite-banner">Você foi convidado para uma sala.</p>
@@ -60,7 +63,8 @@ export default function Home({ onJoin, invite }) {
             Baixar versão desktop
           </a>
         )}
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

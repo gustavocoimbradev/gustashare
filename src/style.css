@@ -146,12 +146,19 @@ input:focus {
 .home {
   height: 100%;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   background:
     radial-gradient(circle at 30% 20%, rgba(124, 107, 251, 0.18), transparent 55%),
     radial-gradient(circle at 75% 80%, rgba(74, 125, 255, 0.14), transparent 55%),
     var(--bg);
+}
+
+.home-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
 }
 
 .home-card {
@@ -231,6 +238,7 @@ input:focus {
   height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .topbar {
@@ -240,6 +248,82 @@ input:focus {
   padding: 12px 18px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+}
+
+.titlebar {
+  display: flex;
+  align-items: stretch;
+  height: 42px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+.titlebar-drag {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0 14px;
+  -webkit-app-region: drag;
+}
+
+.titlebar-right {
+  display: flex;
+  align-items: stretch;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-extra {
+  display: flex;
+  align-items: center;
+  padding: 0 8px 0 0;
+}
+
+.titlebar-extra .leave-btn {
+  min-height: 28px;
+  padding: 5px 11px;
+  font-size: 12px;
+}
+
+.titlebar-controls {
+  display: flex;
+}
+
+.titlebar-btn {
+  width: 46px;
+  height: 42px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.titlebar-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  transform: none;
+}
+
+.titlebar-btn.close:hover {
+  background: #c43b3b;
+  color: #fff;
+}
+
+.titlebar-btn.disabled,
+.titlebar-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.titlebar-btn.disabled:hover,
+.titlebar-btn:disabled:hover {
+  background: transparent;
+  color: var(--text-dim);
 }
 
 .brand {
@@ -322,8 +406,8 @@ input:focus {
 }
 
 .connecting-overlay {
-  position: fixed;
-  inset: 0;
+  position: absolute;
+  inset: 42px 0 0 0;
   z-index: 60;
   display: flex;
   align-items: center;

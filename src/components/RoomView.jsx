@@ -7,9 +7,11 @@ import ParticipantsSidebar from './ParticipantsSidebar.jsx';
 import Dock from './Dock.jsx';
 import CameraPositionModal from './CameraPositionModal.jsx';
 import { LogOut } from 'lucide-react';
+import TitleBar from './TitleBar.jsx';
 import { playJoinSound, playLeaveSound, playChatSound, playMediaOnSound, playMicOnSound, playMicOffSound } from '../lib/sounds.js';
 import { captureWindowNative } from '../lib/nativeCapture.js';
 import { SCREEN_DISPLAY_MEDIA } from '../lib/webrtc.js';
+import { isDesktop } from '../lib/platform.js';
 
 export default function RoomView({ nickname, roomCode, onLeave }) {
   const clientRef = useRef(null);
@@ -279,13 +281,24 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
         </div>
       )}
 
-      <div className="topbar">
-        <div className="brand">GustaShare</div>
-        <button type="button" className="leave-btn" onClick={() => setLeaveOpen(true)}>
-          <LogOut size={15} />
-          Abandonar sala
-        </button>
-      </div>
+      {isDesktop ? (
+        <TitleBar
+          extra={
+            <button type="button" className="leave-btn" onClick={() => setLeaveOpen(true)}>
+              <LogOut size={15} />
+              Abandonar sala
+            </button>
+          }
+        />
+      ) : (
+        <div className="topbar">
+          <div className="brand">GustaShare</div>
+          <button type="button" className="leave-btn" onClick={() => setLeaveOpen(true)}>
+            <LogOut size={15} />
+            Abandonar sala
+          </button>
+        </div>
+      )}
 
       {!ready && (
         <div className="connecting-overlay">

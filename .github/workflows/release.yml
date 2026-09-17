@@ -54,9 +54,10 @@ jobs:
       - name: Copiar .exe pra pasta publicada
         shell: bash
         run: |
-          ls -lh release/GustaShare-Portable.exe
-          cp release/GustaShare-Portable.exe dist/GustaShare-Portable.exe
-          ls -lh dist/GustaShare-Portable.exe dist/latest.json
+          ls -lh release/GustaShare-Setup.exe
+          cp release/GustaShare-Setup.exe dist/GustaShare-Setup.exe
+          cp release/GustaShare-Setup.exe dist/GustaShare-Portable.exe
+          ls -lh dist/GustaShare-Setup.exe dist/GustaShare-Portable.exe dist/latest.json
 
       - name: Deploy na Vercel
         shell: bash
@@ -66,13 +67,13 @@ jobs:
         # Publicamos só o `dist/` (app web + latest.json + .exe) num
         # staging, senão a CLI manda node_modules/target (~750MB).
         run: |
-          ls -lh dist/GustaShare-Portable.exe dist/latest.json
+          ls -lh dist/GustaShare-Setup.exe dist/latest.json
           staging="$(mktemp -d)"
           mkdir -p "$staging/.vercel"
           cp update-server/.vercel/project.json "$staging/.vercel/project.json"
           cp scripts/vercel-static.json "$staging/vercel.json"
           cp -r dist/. "$staging/"
-          ls -lh "$staging/GustaShare-Portable.exe"
+          ls -lh "$staging/GustaShare-Setup.exe" "$staging/GustaShare-Portable.exe"
           cd "$staging"
           npx vercel deploy --prod --yes --token="$VERCEL_TOKEN"
 

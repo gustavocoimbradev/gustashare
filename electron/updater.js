@@ -47,6 +47,7 @@ function downloadFile(url, destPath, onProgress) {
         .get(currentUrl, (res) => {
           if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
             file.close();
+            fs.unlink(destPath, () => {});
             request(res.headers.location);
             return;
           }
@@ -74,29 +75,20 @@ function downloadFile(url, destPath, onProgress) {
   });
 }
 
-// Substitui o .exe portátil por fora do processo atual (o processo que
-// está rodando é uma cópia extraída em uma pasta temporária, não o
-// arquivo .exe que o usuário abriu — por isso o "alvo" real é
-// process.env.PORTABLE_EXECUTABLE_FILE, exposto pelo electron-builder).
-function spawnSwapAndRelaunch(targetExe, downloadedExe) {
+// Fecha o app e roda o instalador NSIS em silêncio (/S). O delay no .bat
+// evita o instalador tentar sobrescrever arquivos ainda travados.
+function spawnInstallerAndQuit(setupExe) {
   const batPath = path.join(os.tmpdir(), `gustashare-update-${Date.now()}.bat`);
   const script = [
     '@echo off',
-    'timeout /t 1 /nobreak >nul',
-    ':retry',
-    'del /f /q "%~1" >nul 2>&1',
-    'if exist "%~1" (',
-    '  timeout /t 1 /nobreak >nul',
-    '  goto retry',
-    ')',
-    'move /y "%~2" "%~1" >nul',
-    'start "" "%~1"',
+    'timeout /t 2 /nobreak >nul',
+    `start /wait "" "%~1" /S`,
     'del "%~f0"',
   ].join('\r\n');
 
   fs.writeFileSync(batPath, script);
 
-  spawn('cmd.exe', ['/c', batPath, targetExe, downloadedExe], {
+  spawn('cmd.exe', ['/c', batPath, setupExe], {
     detached: true,
     stdio: 'ignore',
     windowsHide: true,
@@ -106,14 +98,11 @@ function spawnSwapAndRelaunch(targetExe, downloadedExe) {
 async function checkForUpdate(win, setUpdating) {
   if (!app.isPackaged) return;
 
-  const targetExe = process.env.PORTABLE_EXECUTABLE_FILE;
-  if (!targetExe) return; // não é o .exe portátil rodando diretamente
-
   let manifest;
   try {
     manifest = await fetchManifest(UPDATE_MANIFEST_URL);
   } catch {
-    return; // sem internet ou servidor de update fora do ar — ignora
+    return;
   }
 
   if (!manifest?.version || !manifest?.url) return;
@@ -126,7 +115,7 @@ async function checkForUpdate(win, setUpdating) {
     percent: 0,
   });
 
-  const tmpFile = path.join(os.tmpdir(), `GustaShare-update-${manifest.version}.exe`);
+  const tmpFile = path.join(os.tmpdir(), `GustaShare-Setup-${manifest.version}.exe`);
 
   try {
     await downloadFile(manifest.url, tmpFile, (fraction) => {
@@ -148,7 +137,7 @@ async function checkForUpdate(win, setUpdating) {
     percent: 100,
   });
 
-  spawnSwapAndRelaunch(targetExe, tmpFile);
+  spawnInstallerAndQuit(tmpFile);
   app.exit(0);
 }
 

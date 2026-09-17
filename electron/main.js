@@ -85,8 +85,11 @@ function createWindow() {
     width: initialSize.width,
     height: initialSize.height,
     resizable: !!startupDeepLink,
+    frame: false,
     autoHideMenuBar: true,
-    backgroundColor: '#14161a',
+    backgroundColor: '#101218',
+    minWidth: 420,
+    minHeight: 520,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -150,12 +153,39 @@ function createWindow() {
     });
   });
 
+  win.on('maximize', () => {
+    if (!win.webContents.isDestroyed()) win.webContents.send('window:maximized', true);
+  });
+  win.on('unmaximize', () => {
+    if (!win.webContents.isDestroyed()) win.webContents.send('window:maximized', false);
+  });
+
   return win;
 }
+
+ipcMain.on('window:minimize', (event) => {
+  BrowserWindow.fromWebContents(event.sender)?.minimize();
+});
+
+ipcMain.on('window:maximize', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win || !win.isResizable()) return;
+  if (win.isMaximized()) win.unmaximize();
+  else win.maximize();
+});
+
+ipcMain.on('window:close', (event) => {
+  BrowserWindow.fromWebContents(event.sender)?.close();
+});
+
+ipcMain.handle('window:is-maximized', (event) => {
+  return BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false;
+});
 
 ipcMain.on('window:set-mode', (event, mode) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (!win) return;
+  if (win.isMaximized()) win.unmaximize();
   const size = mode === 'room' ? ROOM_SIZE : HOME_SIZE;
   win.setResizable(mode === 'room');
   win.setSize(size.width, size.height);

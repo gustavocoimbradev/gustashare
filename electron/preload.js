@@ -2,6 +2,15 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('gustashare', {
   setWindowMode: (mode) => ipcRenderer.send('window:set-mode', mode),
+  minimizeWindow: () => ipcRenderer.send('window:minimize'),
+  maximizeWindow: () => ipcRenderer.send('window:maximize'),
+  closeWindow: () => ipcRenderer.send('window:close'),
+  isWindowMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+  onWindowMaximized: (callback) => {
+    const listener = (_event, value) => callback(value);
+    ipcRenderer.on('window:maximized', listener);
+    return () => ipcRenderer.removeListener('window:maximized', listener);
+  },
 
   listScreenSources: () => ipcRenderer.invoke('screen-picker:list-sources'),
   setScreenPickerChoice: (choice) => ipcRenderer.send('screen-picker:set-choice', choice),

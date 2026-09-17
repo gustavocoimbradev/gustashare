@@ -8,10 +8,10 @@
     "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
     "dev:web": "vite",
     "build-native": "cd native/gustashare-capture && npm install && npm run build",
-    "build": "vite build && electron-builder --win portable",
+    "build": "vite build && electron-builder --win nsis",
     "build:web": "vite build --base / && node scripts/prepare-web-dist.js",
     "vercel-build": "vite build --base / && node scripts/prepare-web-dist.js",
-    "build-local": "vite build && electron-builder --win portable -c.directories.output=.",
+    "build-local": "vite build && electron-builder --win nsis -c.directories.output=.",
     "bump-version": "node scripts/bump-version.js",
     "sync-update-server": "node scripts/sync-update-server.js",
     "publish": "git add . && git pull && git commit -m \"publish\" && git push"
@@ -51,10 +51,20 @@
       "en-US"
     ],
     "win": {
-      "target": "portable"
+      "target": "nsis"
     },
-    "portable": {
-      "artifactName": "GustaShare-Portable.exe"
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "GustaShare",
+      "uninstallDisplayName": "GustaShare",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "artifactName": "GustaShare-Setup.exe"
     }
   },
   "allowScripts": {
