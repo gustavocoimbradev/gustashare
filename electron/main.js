@@ -1,0 +1,92 @@
+const { app, BrowserWindow, session, desktopCapturer, ipcMain } = require('electron');
+const path = require('path');
+
+const HOME_SIZE = { width: 440, height: 560 };
+const ROOM_SIZE = { width: 1280, height: 820 };
+
+let pendingSources = [];
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: HOME_SIZE.width,
+    height: HOME_SIZE.height,
+    resizable: false,
+    autoHideMenuBar: true,
+    backgroundColor: '#14161a',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  // No Windows 10/11 modernos, o proprio SO mostra o dialogo nativo de
+  // "compartilhar tela" (telas, janelas e, quando suportado, audio isolado
+  // por aplicativo) e o handler abaixo nem chega a ser chamado. Ele so roda
+  // como fallback (SO sem o seletor nativo), exibindo nosso proprio seletor
+  // dentro do app para garantir que sempre exista essa escolha.
+  session.defaultSession.setDisplayMediaRequestHandler(
+    (request, callback) => {
+      desktopCapturer
+        .getSources({
+          types: ['screen', 'window'],
+          thumbnailSize: { width: 300, height: 200 },
+          fetchWindowIcons: true,
+        })
+        .then((sources) => {
+          pendingSources = sources;
+          win.webContents.send(
+            'screen-picker:sources',
+            sources.map((s) => ({
+              id: s.id,
+              name: s.name,
+              isScreen: s.id.startsWith('screen:'),
+              thumbnail: s.thumbnail.toDataURL(),
+              appIcon: s.appIcon ? s.appIcon.toDataURL() : null,
+            }))
+          );
+
+          ipcMain.once('screen-picker:choice', (_event, choice) => {
+            const source = !choice?.cancelled && pendingSources.find((s) => s.id === choice.id);
+            if (!source) {
+              callback({});
+              return;
+            }
+            callback({
+              video: source,
+              audio: choice.shareAudio && source.id.startsWith('screen:') ? 'loopback' : undefined,
+            });
+          });
+        });
+    },
+    { useSystemPicker: true }
+  );
+
+  if (process.env.NODE_ENV === 'development') {
+    win.loadURL('http://localhost:5173');
+  } else {
+    win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+  }
+
+  return win;
+}
+
+ipcMain.on('window:set-mode', (event, mode) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return;
+  const size = mode === 'room' ? ROOM_SIZE : HOME_SIZE;
+  win.setResizable(mode === 'room');
+  win.setSize(size.width, size.height);
+  win.center();
+});
+
+app.whenReady().then(() => {
+  createWindow();
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});
