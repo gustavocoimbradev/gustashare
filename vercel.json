@@ -12,7 +12,7 @@
       ]
     },
     {
-      "source": "/(robots.txt|sitemap.xml|site.webmanifest)",
+      "source": "/(robots.txt|sitemap.xml|site.webmanifest|llms.txt|llms-full.txt)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=3600" }
       ]

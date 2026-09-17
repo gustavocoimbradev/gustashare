@@ -1,0 +1,31 @@
+# GustaShare
+
+> GustaShare - Compartilhe sua tela gratuitamente.
+
+Participe de chamadas em grupo, compartilhe sua tela, ligue sua câmera e converse com seus amigos de forma descomplicada e gratuita.
+
+GustaShare é um aplicativo e site gratuitos de chamadas em grupo com compartilhamento de tela, câmera, microfone e chat. Não exige cadastro. A mídia viaja ponto a ponto (WebRTC); não há servidor de vídeo.
+
+Site: https://gustashare.vercel.app/
+Instalador Windows: https://gustashare.vercel.app/GustaShare-Setup.exe
+
+## Páginas
+
+- [Início](https://gustashare.vercel.app/): entre numa sala com nickname e código, ou aceite um convite.
+- [Convite de sala](https://gustashare.vercel.app/room/exemplo): URLs `/room/CODIGO` abrem a sala no navegador.
+- [Resumo completo para IAs](https://gustashare.vercel.app/llms-full.txt): descrição detalhada, como funciona e FAQ.
+
+## O que é
+
+- Gratuito
+- Sem cadastro e sem login
+- Web (navegador) e app para Windows
+- Compartilhar tela, ligar câmera, microfone e chat
+- Salas identificadas por um código
+- Chamadas em grupo, P2P
+
+## O que não é
+
+- Não é Zoom, Google Meet nem Discord (não exige conta)
+- Não hospeda o vídeo na nuvem
+- Não é uma rede social
