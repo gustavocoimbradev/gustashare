@@ -6,6 +6,10 @@ const os = require('node:os');
 const { spawn } = require('node:child_process');
 
 const UPDATE_MANIFEST_URL = 'https://gustashare.vercel.app/latest.json';
+const HTTP_HEADERS = {
+  'user-agent': 'GustaShare-Updater',
+  'cache-control': 'no-cache',
+};
 
 function compareVersions(a, b) {
   const pa = a.split('.').map(Number);
@@ -20,7 +24,7 @@ function compareVersions(a, b) {
 function fetchManifest(url) {
   return new Promise((resolve, reject) => {
     https
-      .get(url, { headers: { 'cache-control': 'no-cache' } }, (res) => {
+      .get(url, { headers: HTTP_HEADERS }, (res) => {
         if (res.statusCode !== 200) {
           reject(new Error(`status ${res.statusCode}`));
           return;
@@ -44,11 +48,14 @@ function downloadFile(url, destPath, onProgress) {
     const request = (currentUrl) => {
       const file = fs.createWriteStream(destPath);
       https
-        .get(currentUrl, (res) => {
+        .get(currentUrl, { headers: HTTP_HEADERS }, (res) => {
           if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
             file.close();
             fs.unlink(destPath, () => {});
-            request(res.headers.location);
+            const next = res.headers.location.startsWith('http')
+              ? res.headers.location
+              : new URL(res.headers.location, currentUrl).href;
+            request(next);
             return;
           }
           if (res.statusCode !== 200) {
