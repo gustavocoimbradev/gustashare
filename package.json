@@ -6,9 +6,11 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
+    "dev:web": "vite",
     "build-native": "cd native/gustashare-capture && npm install && npm run build",
     "build": "vite build && electron-builder --win portable",
-    "vercel-build": "node -e \"console.error('GustaShare: Root Directory da Vercel tem que ser update-server (nao a raiz do repo).'); process.exit(1)\"",
+    "build:web": "vite build --base / && node scripts/prepare-web-dist.js",
+    "vercel-build": "vite build --base / && node scripts/prepare-web-dist.js",
     "build-local": "vite build && electron-builder --win portable -c.directories.output=.",
     "bump-version": "node scripts/bump-version.js",
     "sync-update-server": "node scripts/sync-update-server.js",

@@ -294,6 +294,9 @@ export default class RoomClient extends EventTarget {
   // Electron rejeitar o pedido inteiro, então só pedimos o áudio que
   // realmente vamos conseguir entregar.
   async setScreen(on, choice) {
+    if (on && !window.gustashare) {
+      throw new Error('compartilhar tela só no desktop');
+    }
     if (on) {
       const wantsAudio = !!(choice && choice.shareAudio && choice.isScreen);
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: wantsAudio });
@@ -305,6 +308,9 @@ export default class RoomClient extends EventTarget {
   }
 
   async setCam(on) {
+    if (on && !window.gustashare) {
+      throw new Error('câmera só no desktop');
+    }
     if (on) {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       this._setLocalStream('cam', stream);
@@ -314,6 +320,9 @@ export default class RoomClient extends EventTarget {
   }
 
   async setMic(on) {
+    if (on && !window.gustashare) {
+      throw new Error('microfone só no desktop');
+    }
     if (on) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       this._setLocalStream('mic', stream);

@@ -43,28 +43,31 @@ jobs:
       - name: Build app (Windows real, sem wine)
         run: npm run build
 
-      - name: Copiar .exe pra update-server
-        shell: bash
-        run: cp release/GustaShare-Portable.exe update-server/GustaShare-Portable.exe
-
       - name: Atualizar latest.json
         run: node scripts/sync-update-server.js
 
-      - name: Deploy update-server na Vercel
+      - name: Build web (base absoluta, pra Vercel)
+        run: npm run build:web
+
+      - name: Copiar .exe pra pasta publicada
+        shell: bash
+        run: |
+          ls -lh release/GustaShare-Portable.exe
+          cp release/GustaShare-Portable.exe dist/GustaShare-Portable.exe
+
+      - name: Deploy na Vercel
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        # A CLI usa o CWD + Root Directory (`update-server`). Se o CWD for
-        # a raiz do repo, ela manda node_modules/target/release (~750MB) e
-        # estoura o limite de 100MB. Se o CWD for a própria pasta, vira
-        # update-server/update-server. Montamos um staging mínimo com a
-        # hierarquia que o painel espera, só com o site + o .exe.
+        # Root Directory do painel tem que estar VAZIO (raiz do repo).
+        # Publicamos só o `dist/` (app web + latest.json + .exe) num
+        # staging, senão a CLI manda node_modules/target (~750MB).
         run: |
-          ls -lh update-server/GustaShare-Portable.exe
+          ls -lh dist/GustaShare-Portable.exe dist/latest.json
           staging="$(mktemp -d)"
-          mkdir -p "$staging/.vercel" "$staging/update-server"
+          mkdir -p "$staging/.vercel"
           cp update-server/.vercel/project.json "$staging/.vercel/project.json"
-          cp -r update-server/. "$staging/update-server/"
+          cp -r dist/. "$staging/"
           cd "$staging"
           npx vercel deploy --prod --yes --token="$VERCEL_TOKEN"
 

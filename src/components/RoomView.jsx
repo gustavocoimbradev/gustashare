@@ -113,7 +113,8 @@ export default function RoomView({ nickname, roomCode }) {
       setScreenOn(false);
       return;
     }
-    const sources = await window.gustashare.listScreenSources();
+    const sources = await window.gustashare?.listScreenSources?.();
+    if (!sources) return;
     setScreenSources(sources);
   }, [screenOn]);
 

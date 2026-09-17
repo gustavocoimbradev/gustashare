@@ -5,7 +5,7 @@ const path = require('node:path');
 // GitHub Actions) — nunca passa pelo git, entao nunca esbarra no limite
 // de 100MB nem depende do repositorio ser publico. Este script so
 // escreve o latest.json apontando pra URL fixa do arquivo na Vercel;
-// o vercel.json em update-server/ desativa cache nesse arquivo, entao
+// o vercel.json na raiz desativa cache nesse arquivo, entao
 // cada deploy novo fica visivel na hora.
 const root = path.join(__dirname, '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));

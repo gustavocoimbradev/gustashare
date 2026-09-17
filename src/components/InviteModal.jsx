@@ -21,7 +21,7 @@ export default function InviteModal({ roomCode, nickname, onClose }) {
     <div className="picker-backdrop" onClick={onClose}>
       <div className="invite-box" onClick={(e) => e.stopPropagation()}>
         <h2>Convide alguém pra sala</h2>
-        <p className="invite-hint">Quem abrir esse link entra direto nessa sala.</p>
+        <p className="invite-hint">Quem abrir esse link entra na sala pelo navegador (assistir e chat).</p>
 
         <div className="invite-link-row">
           <input readOnly value={link} onFocus={(e) => e.target.select()} />

@@ -2,7 +2,12 @@
 
 Compartilhamento de tela em tempo real, ponto a ponto (P2P), sem servidor próprio.
 
-## Como funciona 
+Há duas formas de usar:
+
+- **Desktop (Windows)**: app Electron (`.exe` portátil) — tela, câmera, microfone, chat.
+- **Web**: o mesmo app em `https://gustashare.vercel.app` — assistir e chat. Convites (`/room/CODIGO`) abrem direto no navegador.
+
+## Como funciona
 
 - Não existe backend rodando na nuvem. O único componente externo é o
   broker público e gratuito do [PeerJS](https://peerjs.com/) (`0.peerjs.com`),
@@ -12,15 +17,24 @@ Compartilhamento de tela em tempo real, ponto a ponto (P2P), sem servidor própr
   participantes (quem está na sala). O host é escolhido automaticamente
   (o primeiro a entrar com aquele código de sala). Se ele sair, outro
   participante assume esse papel sozinho — as conexões de mídia entre os
-  demais não são afetadas, então ninguém percebe a troca. 
-- Cada usuário compartilha sua própria tela/câmera/microfone usando a
-  própria internet — ninguém depende da conexão de um único "servidor".
+  demais não são afetadas, então ninguém percebe a troca.
+- Quem está no **desktop** compartilha tela/câmera/microfone. Quem está na
+  **web** só recebe essa mídia e usa o chat.
 
 ## Rodando em desenvolvimento
+
+App desktop (Electron + Vite):
 
 ```bash
 npm install
 npm run dev
+```
+
+Só a versão web (navegador em `http://localhost:5173`):
+
+```bash
+npm install
+npm run dev:web
 ```
 
 ## Gerando o executável portátil (.exe) para Windows
@@ -38,10 +52,11 @@ O `.exe` portátil (não precisa instalar) fica em `release/GustaShare-Portable.
 
 ## Auto-update
 
-O app checa `https://gustashare.vercel.app/latest.json` toda vez que abre.
-Se a versão de lá for maior que a instalada, ele baixa o novo `.exe`
-sozinho (com uma barra de progresso bloqueando o fechamento da janela) e
-já reabre na versão nova — sem passar pelo navegador.
+O app desktop checa `https://gustashare.vercel.app/latest.json` toda vez
+que abre. Se a versão de lá for maior que a instalada, ele baixa
+`https://gustashare.vercel.app/GustaShare-Portable.exe` sozinho (com uma
+barra de progresso bloqueando o fechamento da janela) e já reabre na
+versão nova — sem passar pelo navegador.
 
 Isso só funciona no `.exe` portátil empacotado (usa a variável de ambiente
 `PORTABLE_EXECUTABLE_FILE` que o electron-builder expõe para saber qual
@@ -50,17 +65,19 @@ arquivo substituir); em modo `npm run dev` o update é ignorado.
 O `.exe` **não** fica commitado no git (passa dos 100MB, limite do
 GitHub) — ele é buildado por um GitHub Actions em Windows real (sem
 precisar de wine) e deployado **direto na Vercel via CLI**, sem nunca
-passar pelo git. `update-server/` é o projeto Vercel: `latest.json`
-(versão atual), `room.html` (página de convite) e o próprio
-`GustaShare-Portable.exe` (só existe lá publicado, nunca no repositório).
-No Vercel, configure:
-- **Framework Preset**: `Other`
-- **Root Directory**: `update-server`
+passar pelo git. O site na Vercel é o app web (`dist/`) mais
+`latest.json` e o instalador, nas mesmas URLs de sempre.
 
-Com isso, `git push` publica só o site estático (`latest.json`, `room.html`).
-O `.exe` **não** vai nesse deploy (não está no git). Pra atualizar o
-instalador, rode o workflow **Build and release GustaShare** — ele manda
-o arquivo pela CLI, junto com o resto da pasta.
+No Vercel, configure:
+
+- **Framework Preset**: `Other`
+- **Root Directory**: **vazio** (raiz do repositório — **não** use `update-server`)
+- Build Command / Output Directory: o `vercel.json` da raiz já define
+  (`vite build --base /` → `dist`)
+
+`git push` publica a versão web. O `.exe` só sobe no workflow de
+release. Se você der push depois de um release, o instalador some do
+deploy até rodar o workflow de novo.
 
 ### Enviando código
 
@@ -69,8 +86,7 @@ npm run publish
 ```
 
 Isso só roda `git add . && git pull && git commit -m "publish" && git push`.
-Não mexe em versão, não builda nada, não dispara nada sozinho — é só pra
-mandar código pro GitHub normalmente.
+Não mexe em versão, não builda o `.exe`, não dispara o workflow de release.
 
 ### Publicando uma nova versão (gerando o .exe)
 
@@ -79,11 +95,10 @@ GitHub e roda manualmente o workflow **Build and release GustaShare**
 (botão "Run workflow"). Ele:
 1. Bumpa a versão (patch) em `package.json`.
 2. Builda o `.exe` num runner Windows real (sem wine).
-3. Copia o `.exe` pra `update-server/` e atualiza `update-server/latest.json`.
-4. Monta uma pasta temporária só com `update-server/` (site + `.exe`) e
-   faz `vercel deploy --prod` de lá. Assim o Root Directory do painel
-   resolve certo e a CLI não manda os 700MB+ de `node_modules`/build.
-5. Commita só `package.json` + `latest.json` de volta pro repo (o `.exe`
+3. Gera o site web, copia `latest.json` + `.exe` pra `dist/` e faz
+   `vercel deploy --prod` dessa pasta (staging pequeno, sem
+   `node_modules`).
+4. Commita só `package.json` + `latest.json` de volta pro repo (o `.exe`
    fica de fora, com `[skip ci]` pra não disparar o workflow de novo).
 
 O auto-updater do app passa a enxergar a nova versão assim que o deploy

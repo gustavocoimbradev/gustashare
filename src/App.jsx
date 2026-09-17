@@ -3,9 +3,11 @@ import Home from './components/Home.jsx';
 import RoomView from './components/RoomView.jsx';
 import UpdateOverlay from './components/UpdateOverlay.jsx';
 import { saveSession } from './lib/storage.js';
+import { parseInviteFromUrl } from './lib/platform.js';
 
 export default function App() {
   const [session, setSession] = useState(null); // { nickname, roomCode }
+  const [invite] = useState(() => parseInviteFromUrl());
 
   useEffect(() => {
     if (!window.gustashare?.onDeepLink) return undefined;
@@ -21,7 +23,10 @@ export default function App() {
     <>
       <UpdateOverlay />
       {!session ? (
-        <Home onJoin={(nickname, roomCode) => setSession({ nickname, roomCode })} />
+        <Home
+          invite={invite}
+          onJoin={(nickname, roomCode) => setSession({ nickname, roomCode })}
+        />
       ) : (
         <RoomView
           key={`${session.nickname}:${session.roomCode}`}
