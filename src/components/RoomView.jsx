@@ -114,7 +114,10 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
     const onPublicToggle = (isPublic) => setIsPublic(isPublic);
     client.addEventListener('public-toggle', onPublicToggle);
 
-    const onHostInfo = (peerId) => setHostId(peerId);
+    const onHostInfo = (peerId) => {
+      console.log('[hostInfo]', peerId);
+      setHostId(peerId);
+    };
     client.addEventListener('host-info', onHostInfo);
 
     client.start().then(() => {
