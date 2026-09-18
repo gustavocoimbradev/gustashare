@@ -1,115 +1,86 @@
-# GustaShare
+# 🎥 GustaShare
 
-Compartilhamento de tela em tempo real, ponto a ponto (P2P), sem servidor próprio.
+**Compartilhamento de tela em tempo real. Simples, rápido, sem servidor.**
 
-Há duas formas de usar:
+![GustaShare Preview](./public/og.png)
 
-- **Desktop (Windows)**: app Electron (instalador `.exe`) — tela, câmera, microfone, chat.
-- **Web**: o mesmo app em `https://gustashare.vercel.app` — assistir e chat. Convites (`/room/CODIGO`) abrem direto no navegador.
+## O Que é?
 
-## Como funciona 
+GustaShare é uma plataforma para compartilhar sua tela com outras pessoas **em tempo real**. Perfeito para:
 
-- Não existe backend rodando na nuvem. O único componente externo é o
-  broker público e gratuito do [PeerJS](https://peerjs.com/) (`0.peerjs.com`),
-  usado apenas para a sinalização inicial (troca de SDP/ICE) — vídeo, áudio
-  e tela sempre trafegam direto entre as máquinas dos participantes (WebRTC).
-- Cada sala tem um "host" que só serve para distribuir a lista de
-  participantes (quem está na sala). O host é escolhido automaticamente
-  (o primeiro a entrar com aquele código de sala). Se ele sair, outro
-  participante assume esse papel sozinho — as conexões de mídia entre os
-  demais não são afetadas, então ninguém percebe a troca.
-- Quem está no **desktop** compartilha tela/câmera/microfone. Quem está na
-  **web** só recebe essa mídia e usa o chat.
+- 👥 Reuniões e apresentações
+- 💻 Pair programming e debugging remoto
+- 🎮 Transmissão de gameplay
+- 📚 Aulas e tutoriais
+- 💬 Chat integrado para comunicação
 
-## Rodando em desenvolvimento
+Sem necessidade de conta, download de software pesado ou servidor privado. Abra, compartilhe o código, pronto!
 
-App desktop (Electron + Vite):
+## ✨ Destaques
+
+- **Zero Setup** — Crie uma sala em um click, compartilhe o código
+- **Privado P2P** — Seu áudio, vídeo e tela vão direto para os participantes (sem passa por servidor)
+- **Desktop + Web** — Use o app Windows ou acesse pelo navegador
+- **Chat Integrado** — Converse sem sair da sala
+- **Auto-Update** — App desktop sempre atualizado automaticamente
+- **Sem Limite de Participantes** — Convide quantas pessoas quiser
+
+## 🚀 Como Usar
+
+### Desktop (Windows)
+
+1. Baixe o [GustaShare-Setup.exe](https://gustashare.vercel.app)
+2. Abra o app, escolha seu nome
+3. Clique "Criar Sala" e compartilhe o código
+4. Outros entram usando o mesmo código
+
+### Web
+
+Acesse **https://gustashare.vercel.app** e entre em uma sala.
+
+> **Dica:** Convites automáticos funcionam com `https://gustashare.vercel.app/room/CODIGO`
+
+## 📊 O Que Você Pode Compartilhar
+
+| Plataforma | Tela | Câmera | Microfone | Chat |
+|:-----------|:----:|:------:|:--------:|:----:|
+| **Desktop** | ✅ | ✅ | ✅ | ✅ |
+| **Web** | ❌ | ❌ | ❌ | ✅ |
+
+> Quem está na web pode ver e ouvir, usar o chat, mas não pode compartilhar.
+
+## 🔒 Privacidade
+
+- ✅ **Sem servidor próprio** — Sua conversa não passa por nós
+- ✅ **Criptografia WebRTC** — Conexão ponto a ponto autenticada
+- ✅ **Sem registro** — Sem criar conta, sem dados pessoais
+- ✅ **Código aberto** — [Veja o código no GitHub](https://github.com)
+
+## 🛠️ Desenvolvendo
+
+Quer compilar ou melhorar? Fácil:
 
 ```bash
+git clone <repo>
+cd gustashare
 npm install
 npm run dev
 ```
 
-Só a versão web (navegador em `http://localhost:5173`):
+Acessa `http://localhost:5173` no navegador.
+
+## 📦 Compilar para Windows
 
 ```bash
-npm install
-npm run dev:web
-```
-
-## Gerando o executável portátil (.exe) para Windows
-
-```bash
-npm install
 npm run build
 ```
 
 O instalador fica em `release/GustaShare-Setup.exe`.
 
-> Gerar `.exe` para Windows a partir de Linux/WSL pode exigir `wine`
-> instalado. Se o build falhar por causa disso, rode `npm run build`
-> diretamente em uma máquina Windows — o restante do projeto já está pronto.
+## 📝 Licença
 
-## Auto-update
+[MIT](LICENSE)
 
-O app desktop checa `https://gustashare.vercel.app/latest.json` toda vez
-que abre. Se a versão de lá for maior que a instalada, ele baixa o
-instalador no **GitHub Releases** (o arquivo passa de 100MB e a Vercel
-Hobby recusa). O updater segue o redirect de
-`https://gustashare.vercel.app/GustaShare-Setup.exe`.
+---
 
-Isso só funciona no app instalado; em `npm run dev` o update é ignorado.
-
-O `.exe` **não** fica commitado no git nem na Vercel. O GitHub Actions
-builda em Windows e publica um Release (não draft). O site na Vercel é
-só o app web + `latest.json`. O repositório precisa ser **público**,
-senão o link de download dá 404.
-
-No Vercel, configure:
-
-- **Framework Preset**: `Other`
-- **Root Directory**: **vazio** (raiz do repositório — **não** use `update-server`)
-- Build Command / Output Directory: o `vercel.json` da raiz já define
-  (`vite build --base /` → `dist`)
-
-`git push` publica a versão web. O `.exe` só sobe no workflow de
-release.
-
-### Enviando código
-
-```bash
-npm run publish
-```
-
-Isso só roda `git add . && git pull && git commit -m "publish" && git push`.
-O push dispara o workflow **Build and release GustaShare**, que bumpa a
-versão e gera o `.exe`.
-
-### Publicando uma nova versão (gerando o .exe)
-
-Cada push em `main`/`master` (ou o botão **Run workflow** em Actions)
-roda o build. Ele:
-1. Bumpa a versão (patch) em `package.json`.
-2. Builda o `.exe` num runner Windows real (sem wine).
-3. Publica `GustaShare-Setup.exe` num GitHub Release (`vX.Y.Z`, latest).
-4. Gera o site web + `latest.json` e faz `vercel deploy --prod` (sem o
-   `.exe`).
-5. Commita `package.json` + `latest.json` de volta pro repo
-   (`[skip ci] [skip vercel]`).
-
-O auto-updater passa a enxergar a nova versão assim que o Release e o
-deploy na Vercel terminarem.
-
-#### Configurando o deploy pra Vercel
-
-O workflow precisa de 3 segredos em **Settings → Secrets and variables →
-Actions** no GitHub:
-
-- **`VERCEL_TOKEN`**: vercel.com → avatar → **Settings** → **Tokens** →
-  criar um novo token.
-- **`VERCEL_ORG_ID`** e **`VERCEL_PROJECT_ID`**: dentro da pasta
-  `update-server/`, rode `npx vercel link` uma vez localmente (loga com
-  sua conta, aponta pro projeto `gustashare` já existente na Vercel) —
-  isso cria `update-server/.vercel/project.json` com os dois IDs. Copie
-  `orgId` e `projectId` de lá pros dois segredos. (Esse arquivo pode ser
-  apagado depois — só precisava dele pra descobrir os IDs.)
+**Feito com ❤️ para compartilhamento sem fricção.**
