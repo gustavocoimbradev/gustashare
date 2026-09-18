@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Download } from 'lucide-react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Download, LogIn, X } from 'lucide-react';
 import { saveSession, loadSession } from '../lib/storage.js';
 import { PublicRoomsRegistry } from '../lib/RoomClient.js';
 import { isDesktop, DESKTOP_DOWNLOAD_URL } from '../lib/platform.js';
@@ -12,6 +12,20 @@ export default function Home({ onJoin, invite }) {
   const [publicRooms, setPublicRooms] = useState([]);
   const [joinDialog, setJoinDialog] = useState(null);
   const [dialogNickname, setDialogNickname] = useState('');
+  const [cardHeight, setCardHeight] = useState(null);
+  const cardRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!publicRooms.length) return undefined;
+    function measure() {
+      if (!cardRef.current) return;
+      const isStacked = window.matchMedia('(max-width: 860px)').matches;
+      setCardHeight(isStacked ? null : cardRef.current.offsetHeight);
+    }
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [publicRooms.length, invite]);
 
   useEffect(() => {
     window.gustashare?.setWindowMode('home');
@@ -61,7 +75,7 @@ export default function Home({ onJoin, invite }) {
       {isDesktop && <TitleBar canMaximize={false} />}
       <div className="home-main">
         <div className={`home-box ${publicRooms.length > 0 ? 'with-rooms' : ''}`}>
-          <div className="home-card">
+          <div className="home-card" ref={cardRef}>
             <form onSubmit={submit}>
               <div className="home-hero">
                 <h1>GustaShare</h1>
@@ -102,7 +116,7 @@ export default function Home({ onJoin, invite }) {
           </div>
 
           {publicRooms.length > 0 && (
-            <div className="home-public-rooms">
+            <div className="home-public-rooms" style={cardHeight ? { maxHeight: cardHeight } : undefined}>
               <h3>Salas Públicas</h3>
               <div className="public-rooms-list">
                 {publicRooms.map((room) => (
@@ -127,9 +141,14 @@ export default function Home({ onJoin, invite }) {
 
       {joinDialog && (
         <div className="picker-backdrop" onClick={() => setJoinDialog(null)}>
-          <div className="invite-box" onClick={(e) => e.stopPropagation()}>
-            <h2>Qual é seu nickname?</h2>
-            <p className="invite-hint">Digite um nome para entrar na sala</p>
+          <div className="invite-box nickname-box" onClick={(e) => e.stopPropagation()}>
+            <div className="dialog-head">
+              <h2>Qual é seu nickname?</h2>
+              <button type="button" className="dialog-close" onClick={() => setJoinDialog(null)} aria-label="Fechar">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="invite-hint">Digite um nome para entrar na sala {joinDialog.roomCode}</p>
             <input
               type="text"
               placeholder="Seu nickname"
@@ -141,14 +160,12 @@ export default function Home({ onJoin, invite }) {
             />
             <button
               type="button"
-              className="leave-confirm"
+              className="desktop-download-btn"
               onClick={confirmJoinWithNickname}
               disabled={!dialogNickname.trim()}
             >
+              <LogIn size={16} />
               Entrar
-            </button>
-            <button type="button" className="leave-cancel" onClick={() => setJoinDialog(null)}>
-              Cancelar
             </button>
           </div>
         </div>

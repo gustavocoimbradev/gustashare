@@ -195,7 +195,7 @@ input:focus {
 .home-box {
   display: flex;
   align-items: stretch;
-  max-height: min(620px, calc(100vh - 40px));
+  max-height: calc(100vh - 40px);
   background: var(--surface);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
@@ -206,6 +206,7 @@ input:focus {
 .home-card {
   display: flex;
   flex-direction: column;
+  align-self: flex-start;
   gap: 14px;
   width: 100%;
   max-width: 340px;
@@ -1499,6 +1500,23 @@ input:focus {
   line-height: 1.45;
 }
 
+.nickname-box .invite-hint {
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
+.nickname-box input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 16px;
+}
+
+.desktop-download-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  box-shadow: none;
+}
+
 .games-list {
   display: flex;
   flex-direction: column;
@@ -1598,6 +1616,8 @@ input:focus {
     align-items: center;
     justify-content: center;
     padding: 24px 22px calc(24px + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .home-box {
