@@ -97,29 +97,29 @@ export default function Home({ onJoin, invite }) {
               )}
             </div>
           </form>
-
-          {publicRooms.length > 0 && (
-            <div className="home-public-rooms">
-              <h3>Salas Públicas</h3>
-              <div className="public-rooms-list">
-                {publicRooms.map((room) => (
-                  <button
-                    key={room.roomCode}
-                    type="button"
-                    className="public-room-card"
-                    onClick={() => joinPublicRoom(room)}
-                  >
-                    <div className="room-info">
-                      <div className="room-name">{room.roomCode}</div>
-                      <div className="room-host">{room.hostName || 'Host desconhecido'}</div>
-                    </div>
-                    <div className="room-count">{room.participantCount} {room.participantCount === 1 ? 'pessoa' : 'pessoas'}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
+
+        {publicRooms.length > 0 && (
+          <div className="home-public-rooms">
+            <h3>Salas Públicas</h3>
+            <div className="public-rooms-list">
+              {publicRooms.map((room) => (
+                <button
+                  key={room.roomCode}
+                  type="button"
+                  className="public-room-card"
+                  onClick={() => joinPublicRoom(room)}
+                >
+                  <div className="room-info">
+                    <div className="room-name">{room.roomCode}</div>
+                    <div className="room-host">{room.hostName || 'Host desconhecido'}</div>
+                  </div>
+                  <div className="room-count">{room.participantCount} {room.participantCount === 1 ? 'pessoa' : 'pessoas'}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {joinDialog && (

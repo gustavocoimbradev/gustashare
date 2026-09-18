@@ -206,20 +206,6 @@ input:focus {
   box-shadow: var(--shadow-md);
 }
 
-.home-card > form {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.home-card > form > * {
-  margin-bottom: 14px;
-}
-
-.home-card > form > *:last-child {
-  margin-bottom: 0;
-}
-
 .home-hero,
 .home-fields {
   display: flex;

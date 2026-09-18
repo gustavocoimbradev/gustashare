@@ -17,7 +17,8 @@
       "Bash(git commit -m 'feat: show host indicator in room topbar *)",
       "Bash(git commit -m 'feat: move host indicator to participants list and improve UI *)",
       "Bash(git commit -m 'feat: add beautiful dialog for nickname input when joining public rooms *)",
-      "Bash(git commit -m 'fix: style system messages \\(join/leave\\) as events, not regular messages *)"
+      "Bash(git commit -m 'fix: style system messages \\(join/leave\\) as events, not regular messages *)",
+      "Bash(git commit -m 'fix: move public rooms list outside home-card for side-by-side layout *)"
     ]
   }
 }
