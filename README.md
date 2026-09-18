@@ -1,64 +1,61 @@
 # 🎥 GustaShare
 
-**Compartilhamento de tela em tempo real. Simples, rápido, sem servidor.**
+**Compartilhe sua tela, câmera e microfone com outras pessoas em tempo real.**
 
 ![GustaShare Preview](./public/og.png)
 
-## O Que é?
-
-GustaShare é uma plataforma para compartilhar sua tela com outras pessoas **em tempo real**. Perfeito para:
+## Para Quê?
 
 - 👥 Reuniões e apresentações
-- 💻 Pair programming e debugging remoto
-- 🎮 Transmissão de gameplay
+- 💻 Trabalho remoto e pair programming
+- 🎮 Transmissão de games
 - 📚 Aulas e tutoriais
-- 💬 Chat integrado para comunicação
+- 💬 Comunicação de voz e texto
 
-Sem necessidade de conta, download de software pesado ou servidor privado. Abra, compartilhe o código, pronto!
+## 🚀 Como Funciona
 
-## ✨ Destaques
+1. **Crie uma sala** — Abra o app (Windows) ou acesse pelo navegador
+2. **Compartilhe o código** — Envie para quem quiser acompanhar
+3. **Pronto** — Eles entram usando o mesmo código
 
-- **Zero Setup** — Crie uma sala em um click, compartilhe o código
-- **Privado P2P** — Seu áudio, vídeo e tela vão direto para os participantes (sem passa por servidor)
-- **Desktop + Web** — Use o app Windows ou acesse pelo navegador
-- **Chat Integrado** — Converse sem sair da sala
-- **Auto-Update** — App desktop sempre atualizado automaticamente
-- **Sem Limite de Participantes** — Convide quantas pessoas quiser
+Sem necessidade de conta, sem downloads complicados.
 
-## 🚀 Como Usar
+## 📱 Plataformas
 
-### Desktop (Windows)
+| | Desktop (Windows) | Web (Navegador) |
+|:---|:---:|:---:|
+| **Compartilhar tela** | ✅ | ✅ |
+| **Câmera** | ✅ | ✅ |
+| **Microfone** | ✅ | ✅ |
+| **Chat** | ✅ | ✅ |
+| **Auto-update** | ✅ | — |
+
+## 🎯 Quick Start
+
+### Windows
 
 1. Baixe o [GustaShare-Setup.exe](https://gustashare.vercel.app)
-2. Abra o app, escolha seu nome
-3. Clique "Criar Sala" e compartilhe o código
-4. Outros entram usando o mesmo código
+2. Instale e abra
+3. Digite seu nome, crie uma sala
+4. Compartilhe o código com quem quiser
 
-### Web
+### Navegador
 
-Acesse **https://gustashare.vercel.app** e entre em uma sala.
+Acesse **https://gustashare.vercel.app** e entre em uma sala usando o código.
 
-> **Dica:** Convites automáticos funcionam com `https://gustashare.vercel.app/room/CODIGO`
+> Compartilhe um link automático: `https://gustashare.vercel.app/room/CODIGO`
 
-## 📊 O Que Você Pode Compartilhar
+## 💪 O Que Faz GustaShare Diferente
 
-| Plataforma | Tela | Câmera | Microfone | Chat |
-|:-----------|:----:|:------:|:--------:|:----:|
-| **Desktop** | ✅ | ✅ | ✅ | ✅ |
-| **Web** | ❌ | ❌ | ❌ | ✅ |
+✅ **Super rápido** — Sem delays, sem buffering  
+✅ **Privado** — Sua conversa é entre vocês  
+✅ **Sem limite de pessoas** — Convide quantas quiser  
+✅ **Sem conta ou login** — Abra e use  
+✅ **Chat integrado** — Converse enquanto compartilha  
 
-> Quem está na web pode ver e ouvir, usar o chat, mas não pode compartilhar.
+## 🛠️ Desenvolver
 
-## 🔒 Privacidade
-
-- ✅ **Sem servidor próprio** — Sua conversa não passa por nós
-- ✅ **Criptografia WebRTC** — Conexão ponto a ponto autenticada
-- ✅ **Sem registro** — Sem criar conta, sem dados pessoais
-- ✅ **Código aberto** — [Veja o código no GitHub](https://github.com)
-
-## 🛠️ Desenvolvendo
-
-Quer compilar ou melhorar? Fácil:
+Quer rodar localmente?
 
 ```bash
 git clone <repo>
@@ -67,7 +64,7 @@ npm install
 npm run dev
 ```
 
-Acessa `http://localhost:5173` no navegador.
+Acessa `http://localhost:5173`.
 
 ## 📦 Compilar para Windows
 
@@ -77,10 +74,6 @@ npm run build
 
 O instalador fica em `release/GustaShare-Setup.exe`.
 
-## 📝 Licença
-
-[MIT](LICENSE)
-
 ---
 
-**Feito com ❤️ para compartilhamento sem fricção.**
+**Começe a compartilhar agora.**
