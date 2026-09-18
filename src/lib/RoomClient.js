@@ -741,11 +741,7 @@ export default class RoomClient extends EventTarget {
   }
 
   setPublic(isPublic) {
-    if (!this.isHost) {
-      console.warn('Tentativa de setPublic quando não é host');
-      return;
-    }
-    console.log('[setPublic]', isPublic, 'isHost:', this.isHost);
+    if (!this.isHost) return;
     this.isPublic = isPublic;
     this.emit('public-toggle', this.isPublic);
     if (isPublic) {

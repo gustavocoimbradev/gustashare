@@ -111,16 +111,10 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
     client.addEventListener('self-stream', onSelfStream);
     client.addEventListener('chat', onChat);
 
-    const onPublicToggle = (e) => {
-      console.log('[publicToggle]', e.detail);
-      setIsPublic(e.detail);
-    };
+    const onPublicToggle = (e) => setIsPublic(e.detail);
     client.addEventListener('public-toggle', onPublicToggle);
 
-    const onHostInfo = (e) => {
-      console.log('[hostInfo]', e.detail);
-      setHostId(e.detail);
-    };
+    const onHostInfo = (e) => setHostId(e.detail);
     client.addEventListener('host-info', onHostInfo);
 
     client.start().then(() => {

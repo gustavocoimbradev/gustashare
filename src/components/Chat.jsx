@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { SendHorizontal, X } from 'lucide-react';
 import { userColorStyle } from '../lib/userColor.js';
-import Avatar from './Avatar.jsx';
 import ClientBadge from './ClientBadge.jsx';
 import { faviconUrl, openGame } from '../lib/games.js';
 
@@ -72,7 +71,6 @@ export default function Chat({ messages, onSend, selfId, roster, className, onCl
             >
               {!grouped && !isEvent && (
                 <div className="chat-author">
-                  <Avatar nickname={m.nickname} userId={m.id} size="sm" />
                   <span className="chat-author-text">
                     {m.nickname || 'Alguém'}
                     <ClientBadge platform={platform} />
