@@ -312,7 +312,7 @@ input:focus {
 
 @media (min-width: 861px) {
   .home-card {
-    width: 380px;
+    width: 300px;
     max-width: 100%;
   }
 
@@ -322,7 +322,7 @@ input:focus {
   }
 
   .home-public-rooms {
-    width: 380px;
+    width: 300px;
     max-width: 100%;
   }
 }
