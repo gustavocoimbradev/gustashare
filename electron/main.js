@@ -2,7 +2,7 @@ const { app, BrowserWindow, session, desktopCapturer, ipcMain, shell } = require
 const path = require('path');
 const { checkForUpdate } = require('./updater.js');
 
-const HOME_SIZE = { width: 440, height: 560 };
+const HOME_SIZE = { width: 900, height: 640 };
 const ROOM_SIZE = { width: 1280, height: 820 };
 const PROTOCOL = 'gustashare';
 
