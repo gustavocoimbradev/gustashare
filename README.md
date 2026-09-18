@@ -28,7 +28,6 @@ Sem necessidade de conta, sem downloads complicados.
 | **Câmera** | ✅ | ✅ |
 | **Microfone** | ✅ | ✅ |
 | **Chat** | ✅ | ✅ |
-| **Auto-update** | ✅ | — |
 
 ## 🎯 Quick Start
 
