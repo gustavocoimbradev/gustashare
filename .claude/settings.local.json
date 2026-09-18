@@ -4,7 +4,8 @@
       "Bash(git add *)",
       "Bash(git commit -m 'fix: critical multiplayer bugs - camera positions, member discovery, and roster consistency *)",
       "Bash(npm run *)",
-      "Bash(git commit -m 'fix: auto-detect when camera/mic tracks are stopped by OS *)"
+      "Bash(git commit -m 'fix: auto-detect when camera/mic tracks are stopped by OS *)",
+      "Bash(git commit -m 'fix: properly clean up event listeners to prevent memory leaks *)"
     ]
   }
 }

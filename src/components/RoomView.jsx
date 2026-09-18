@@ -36,16 +36,14 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
     const client = new RoomClient(nickname, roomCode);
     clientRef.current = client;
 
-    client.addEventListener('roster', (e) => setRoster(e.detail));
-
-    client.addEventListener('stream', (e) => {
+    const onRoster = (e) => setRoster(e.detail);
+    const onStream = (e) => {
       const { peerId, type, stream } = e.detail;
       setStreams((prev) => ({ ...prev, [peerId]: { ...prev[peerId], [type]: stream } }));
       if (type === 'screen' || type === 'cam') playMediaOnSound();
       else if (type === 'mic') playMicOnSound();
-    });
-
-    client.addEventListener('stream-removed', (e) => {
+    };
+    const onStreamRemoved = (e) => {
       const { peerId, type } = e.detail;
       if (type === 'mic') playMicOffSound();
       setStreams((prev) => {
@@ -53,9 +51,8 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
         delete entry[type];
         return { ...prev, [peerId]: entry };
       });
-    });
-
-    client.addEventListener('peer-joined', (e) => {
+    };
+    const onPeerJoined = (e) => {
       playJoinSound();
       const member = e.detail;
       if (!member?.id || member.id === client.peer?.id) return;
@@ -69,9 +66,8 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
           ts: Date.now(),
         },
       ]);
-    });
-
-    client.addEventListener('peer-left', (e) => {
+    };
+    const onPeerLeft = (e) => {
       playLeaveSound();
       const member = typeof e.detail === 'object' && e.detail ? e.detail : { id: e.detail };
       const peerId = member.id;
@@ -91,19 +87,25 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
           ts: Date.now(),
         },
       ]);
-    });
-
-    client.addEventListener('self-stream', (e) => {
+    };
+    const onSelfStream = (e) => {
       const { type, stream } = e.detail;
       setSelfStreams((prev) => ({ ...prev, [type]: stream }));
-    });
-
-    client.addEventListener('chat', (e) => {
+    };
+    const onChat = (e) => {
       setMessages((prev) => [...prev, e.detail]);
       if (e.detail.id !== client.peer?.id) {
         playChatSound();
       }
-    });
+    };
+
+    client.addEventListener('roster', onRoster);
+    client.addEventListener('stream', onStream);
+    client.addEventListener('stream-removed', onStreamRemoved);
+    client.addEventListener('peer-joined', onPeerJoined);
+    client.addEventListener('peer-left', onPeerLeft);
+    client.addEventListener('self-stream', onSelfStream);
+    client.addEventListener('chat', onChat);
 
     client.start().then(() => {
       setSelfId(client.peer.id);
@@ -113,6 +115,13 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
     return () => {
       nativeCaptureRef.current?.stop();
       nativeCaptureRef.current = null;
+      client.removeEventListener('roster', onRoster);
+      client.removeEventListener('stream', onStream);
+      client.removeEventListener('stream-removed', onStreamRemoved);
+      client.removeEventListener('peer-joined', onPeerJoined);
+      client.removeEventListener('peer-left', onPeerLeft);
+      client.removeEventListener('self-stream', onSelfStream);
+      client.removeEventListener('chat', onChat);
       client.leave();
     };
   }, [nickname, roomCode]);
