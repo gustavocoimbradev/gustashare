@@ -64,6 +64,7 @@ export default function Home({ onJoin, invite }) {
           <form onSubmit={submit}>
             <div className="home-hero">
               <h1>GustaShare</h1>
+              <p className="home-slogan">Compartilhe tela, conversa e vídeo com seus amigos, tudo em um só lugar</p>
               {invite?.roomCode ? (
                 <p className="invite-banner">
                   Você foi convidado para a sala <strong>{invite.roomCode}</strong>
