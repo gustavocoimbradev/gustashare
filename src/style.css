@@ -209,7 +209,7 @@ input:focus {
   align-self: flex-start;
   gap: 14px;
   width: 100%;
-  max-width: 400px;
+  max-width: 440px;
   min-height: 0;
   padding: 30px 28px;
 }
