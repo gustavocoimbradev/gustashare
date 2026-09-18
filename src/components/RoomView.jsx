@@ -76,6 +76,7 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
         delete next[peerId];
         return next;
       });
+      setRoster((prev) => prev.filter((m) => m.id !== peerId));
       if (!peerId || peerId === client.peer?.id) return;
       setMessages((prev) => [
         ...prev,
