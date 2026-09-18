@@ -60,67 +60,69 @@ export default function Home({ onJoin, invite }) {
     <div className="home">
       {isDesktop && <TitleBar canMaximize={false} />}
       <div className="home-main">
-        <div className="home-card">
-          <form onSubmit={submit}>
-            <div className="home-hero">
-              <h1>GustaShare</h1>
-              <p className="home-slogan">Compartilhe sua tela gratuitamente</p>
-              {invite?.roomCode ? (
-                <p className="invite-banner">
-                  Você foi convidado para a sala <strong>{invite.roomCode}</strong>
-                </p>
-              ) : null}
-            </div>
-            <div className="home-fields">
-              <input
-                placeholder="Seu nickname"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                maxLength={24}
-                autoFocus
-              />
-              {!invite?.roomCode && (
+        <div className={`home-box ${publicRooms.length > 0 ? 'with-rooms' : ''}`}>
+          <div className="home-card">
+            <form onSubmit={submit}>
+              <div className="home-hero">
+                <h1>GustaShare</h1>
+                <p className="home-slogan">Compartilhe sua tela gratuitamente</p>
+                {invite?.roomCode ? (
+                  <p className="invite-banner">
+                    Você foi convidado para a sala <strong>{invite.roomCode}</strong>
+                  </p>
+                ) : null}
+              </div>
+              <div className="home-fields">
                 <input
-                  placeholder="Código da sala"
-                  value={roomCode}
-                  onChange={(e) => setRoomCode(e.target.value)}
+                  placeholder="Seu nickname"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
                   maxLength={24}
+                  autoFocus
                 />
-              )}
-            </div>
-            <div className="home-actions">
-              <button type="submit">Entrar</button>
-              {!isDesktop && (
-                <a className="home-download" href={DESKTOP_DOWNLOAD_URL}>
-                  <Download size={14} />
-                  Baixar versão desktop
-                </a>
-              )}
-            </div>
-          </form>
-        </div>
-
-        {publicRooms.length > 0 && (
-          <div className="home-public-rooms">
-            <h3>Salas Públicas</h3>
-            <div className="public-rooms-list">
-              {publicRooms.map((room) => (
-                <button
-                  key={room.roomCode}
-                  type="button"
-                  className="public-room-card"
-                  onClick={() => joinPublicRoom(room)}
-                >
-                  <div className="room-info">
-                    <div className="room-name">{room.roomCode}</div>
-                    <div className="room-host">{room.hostName || 'Host desconhecido'}</div>
-                  </div>
-                  <div className="room-count">{room.participantCount} {room.participantCount === 1 ? 'pessoa' : 'pessoas'}</div>
-                </button>
-              ))}
-            </div>
+                {!invite?.roomCode && (
+                  <input
+                    placeholder="Código da sala"
+                    value={roomCode}
+                    onChange={(e) => setRoomCode(e.target.value)}
+                    maxLength={24}
+                  />
+                )}
+              </div>
+              <div className="home-actions">
+                <button type="submit">Entrar</button>
+                {!isDesktop && (
+                  <a className="home-download" href={DESKTOP_DOWNLOAD_URL}>
+                    <Download size={14} />
+                    Baixar versão desktop
+                  </a>
+                )}
+              </div>
+            </form>
           </div>
-        )}
+
+          {publicRooms.length > 0 && (
+            <div className="home-public-rooms">
+              <h3>Salas Públicas</h3>
+              <div className="public-rooms-list">
+                {publicRooms.map((room) => (
+                  <button
+                    key={room.roomCode}
+                    type="button"
+                    className="public-room-card"
+                    onClick={() => joinPublicRoom(room)}
+                  >
+                    <div className="room-info">
+                      <div className="room-name">{room.roomCode}</div>
+                      <div className="room-host">{room.hostName || 'Host desconhecido'}</div>
+                    </div>
+                    <div className="room-count">{room.participantCount} {room.participantCount === 1 ? 'pessoa' : 'pessoas'}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {joinDialog && (

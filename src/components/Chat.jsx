@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { SendHorizontal, X } from 'lucide-react';
 import { userColorStyle } from '../lib/userColor.js';
 import ClientBadge from './ClientBadge.jsx';
+import HostBadge from './HostBadge.jsx';
 import { faviconUrl, openGame } from '../lib/games.js';
 
 function GameInviteText({ game }) {
@@ -33,7 +34,7 @@ function GameInviteText({ game }) {
   );
 }
 
-export default function Chat({ messages, onSend, selfId, roster, className, onClose }) {
+export default function Chat({ messages, onSend, selfId, roster, hostId, className, onClose }) {
   const [text, setText] = useState('');
   const listRef = useRef(null);
 
@@ -73,6 +74,7 @@ export default function Chat({ messages, onSend, selfId, roster, className, onCl
                 <div className="chat-author">
                   <span className="chat-author-text">
                     {m.nickname || 'Alguém'}
+                    {m.id === hostId && <HostBadge />}
                     <ClientBadge platform={platform} />
                   </span>
                 </div>

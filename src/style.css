@@ -188,9 +188,19 @@ input:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 32px;
   padding: 20px;
   min-height: 0;
+}
+
+.home-box {
+  display: flex;
+  align-items: stretch;
+  max-height: min(620px, calc(100vh - 40px));
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
 }
 
 .home-card {
@@ -199,11 +209,8 @@ input:focus {
   gap: 14px;
   width: 100%;
   max-width: 340px;
-  background: var(--surface);
+  min-height: 0;
   padding: 30px 28px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-md);
 }
 
 .home-hero {
@@ -289,17 +296,14 @@ input:focus {
 }
 
 .home-public-rooms {
-  flex: 0 1 340px;
-  background: var(--surface);
-  padding: 30px 28px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-md);
+  flex: 0 1 300px;
+  min-width: 260px;
+  padding: 30px 24px;
+  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: 100%;
-  overflow-y: auto;
+  min-height: 0;
 }
 
 .home-public-rooms h3 {
@@ -1083,11 +1087,6 @@ input:focus {
   flex-shrink: 0;
 }
 
-.host-icon {
-  color: #fbbf24;
-  flex-shrink: 0;
-}
-
 .client-badge {
   display: inline-flex;
   align-items: center;
@@ -1098,6 +1097,10 @@ input:focus {
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-dim);
+}
+
+.client-badge.host {
+  color: #fbbf24;
 }
 
 .client-badge.pc {
@@ -1597,6 +1600,17 @@ input:focus {
     padding: 24px 22px calc(24px + env(safe-area-inset-bottom, 0px));
   }
 
+  .home-box {
+    flex-direction: column;
+    max-height: none;
+    width: 100%;
+    max-width: 340px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
   .home-card {
     max-width: 340px;
     flex: 0 0 auto;
@@ -1608,6 +1622,16 @@ input:focus {
     border-radius: 0;
     padding: 0;
     gap: 18px;
+  }
+
+  .home-public-rooms {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-width: 340px;
+    width: 100%;
+    max-height: 240px;
+    padding: 20px 0 0;
+    margin-top: 20px;
   }
 
   .home-card h1 {

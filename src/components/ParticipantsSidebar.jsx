@@ -1,8 +1,9 @@
 import React from 'react';
-import { X, Crown } from 'lucide-react';
+import { X } from 'lucide-react';
 import useSpeaking from '../lib/useSpeaking.js';
 import { userColorStyle } from '../lib/userColor.js';
 import ClientBadge from './ClientBadge.jsx';
+import HostBadge from './HostBadge.jsx';
 import MicBadge from './MicBadge.jsx';
 
 function ParticipantRow({ nickname, isSelf, userId, platform, micStream, isHost }) {
@@ -16,7 +17,7 @@ function ParticipantRow({ nickname, isSelf, userId, platform, micStream, isHost 
         {isSelf ? ' (você)' : ''}
       </span>
       <span className="participant-badges">
-        {isHost && <Crown size={14} className="host-icon" title="Host da sala" />}
+        {isHost && <HostBadge />}
         <ClientBadge platform={platform} />
         <MicBadge on={micOn} />
       </span>

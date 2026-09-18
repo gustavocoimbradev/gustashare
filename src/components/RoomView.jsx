@@ -366,6 +366,7 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
                   userId={m.id}
                   nickname={m.nickname}
                   isSelf={isSelf}
+                  isHost={m.id === hostId}
                   platform={m.platform}
                   screenStream={s.screen}
                   camStream={s.cam}
@@ -402,6 +403,7 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
           onSend={sendChat}
           selfId={selfId}
           roster={roster}
+          hostId={hostId}
         />
       </div>
     </div>
