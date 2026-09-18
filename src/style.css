@@ -209,7 +209,7 @@ input:focus {
   align-self: flex-start;
   flex: 0 0 auto;
   gap: 14px;
-  width: 440px;
+  width: 380px;
   max-width: 100%;
   min-height: 0;
   padding: 30px 28px;
@@ -303,8 +303,10 @@ input:focus {
 }
 
 .home-public-rooms {
-  flex: 0 1 300px;
-  min-width: 260px;
+  flex: 0 0 auto;
+  width: 380px;
+  max-width: 100%;
+  min-width: 0;
   padding: 30px 24px;
   border-left: 1px solid var(--border);
   display: flex;
