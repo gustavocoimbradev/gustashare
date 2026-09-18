@@ -177,7 +177,16 @@ export default class RoomClient extends EventTarget {
 
     conn.on('data', (data) => {
       if (data.type === 'roster') {
-        this.cameraPositions = new Map(Object.entries(data.cameraPositions || {}));
+        const incomingPositions = Object.entries(data.cameraPositions || {});
+        for (const [peerId, position] of incomingPositions) {
+          this.cameraPositions.set(peerId, position);
+        }
+        const rosterIds = new Set(data.roster.map((m) => m.id));
+        for (const peerId of this.cameraPositions.keys()) {
+          if (!rosterIds.has(peerId)) {
+            this.cameraPositions.delete(peerId);
+          }
+        }
         this.emit('camera-positions', Object.fromEntries(this.cameraPositions));
         this._applyRoster(data.roster);
         const listed = data.roster?.some((m) => m.id === this.peer.id);
@@ -236,6 +245,7 @@ export default class RoomClient extends EventTarget {
       this.memberConns.set(conn.peer, conn);
       this.roster = this.roster.filter((m) => m.id !== conn.peer);
       this.roster.push(this._member(conn.peer, data.nickname, data.platform));
+      this._callPeerWithActiveStreams(conn.peer);
       this._broadcastRoster();
       this.emit('roster', this.roster);
       this.emit('peer-joined', this._member(conn.peer, data.nickname, data.platform));
@@ -407,10 +417,12 @@ export default class RoomClient extends EventTarget {
 
     for (const m of roster) {
       if (m.id !== this.peer.id && !prevIds.has(m.id)) {
-        // No primeiro roster recebido (snapshot de quem já estava na sala),
-        // não é uma "entrada" de verdade — não toca som pra isso.
-        if (wasInitialized) this.emit('peer-joined', m);
-        else this._callPeerWithActiveStreams(m.id);
+        if (wasInitialized) {
+          this.emit('peer-joined', m);
+          this._callPeerWithActiveStreams(m.id);
+        } else {
+          this._callPeerWithActiveStreams(m.id);
+        }
       }
     }
     for (const id of prevIds) {
@@ -457,10 +469,11 @@ export default class RoomClient extends EventTarget {
     if (!peerId || peerId === this.peer?.id) return;
     ['screen', 'cam', 'mic'].forEach((type, i) => {
       if (!this.localStreams[type]) return;
+      const stream = this.localStreams[type];
+      if (!stream) return;
       setTimeout(() => {
         if (this.stopped) return;
-        const stream = this.localStreams[type];
-        if (stream) this._callPeer(peerId, type, stream);
+        this._callPeer(peerId, type, stream);
       }, 80 + i * 160);
     });
   }
@@ -543,7 +556,8 @@ export default class RoomClient extends EventTarget {
       this.isHost = true;
       this._reconnecting = false;
       this.memberConns = new Map();
-      this.roster = [this._selfMember()];
+      const othersFromPreviousRoster = this.roster.filter((m) => m.id !== this.peer.id);
+      this.roster = [this._selfMember(), ...othersFromPreviousRoster];
       this._setupHostPeer();
       this.emit('roster', this.roster);
     });
