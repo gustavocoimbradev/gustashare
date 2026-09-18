@@ -20,7 +20,8 @@
       "Bash(git commit -m 'fix: style system messages \\(join/leave\\) as events, not regular messages *)",
       "Bash(git commit -m 'fix: move public rooms list outside home-card for side-by-side layout *)",
       "Bash(git commit -m 'debug: add logging to setPublic to troubleshoot toggle issue *)",
-      "Bash(git commit -m 'debug: add logging for hostId tracking *)"
+      "Bash(git commit -m 'debug: add logging for hostId tracking *)",
+      "Bash(git commit -m 'fix: correct event listener for public-toggle and host-info *)"
     ]
   }
 }
