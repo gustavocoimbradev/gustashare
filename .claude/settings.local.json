@@ -6,7 +6,8 @@
       "Bash(npm run *)",
       "Bash(git commit -m 'fix: auto-detect when camera/mic tracks are stopped by OS *)",
       "Bash(git commit -m 'fix: properly clean up event listeners to prevent memory leaks *)",
-      "Bash(git commit -m 'ui: reduce camera overlay size from 80px to 60px *)"
+      "Bash(git commit -m 'ui: reduce camera overlay size from 80px to 60px *)",
+      "Bash(git commit -m 'feat: add user avatars in chat and participants list *)"
     ]
   }
 }

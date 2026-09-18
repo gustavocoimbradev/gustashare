@@ -2,6 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import useSpeaking from '../lib/useSpeaking.js';
 import { userColorStyle } from '../lib/userColor.js';
+import Avatar from './Avatar.jsx';
 import ClientBadge from './ClientBadge.jsx';
 import MicBadge from './MicBadge.jsx';
 
@@ -11,7 +12,7 @@ function ParticipantRow({ nickname, isSelf, userId, platform, micStream }) {
 
   return (
     <div className={`participant-row ${speaking ? 'speaking' : ''}`} style={userColorStyle(userId)}>
-      <span className="participant-dot" />
+      <Avatar nickname={nickname} userId={userId} size="sm" />
       <span className="participant-name">
         {nickname}
         {isSelf ? ' (você)' : ''}
