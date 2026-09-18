@@ -209,15 +209,10 @@ input:focus {
   align-self: flex-start;
   flex: 0 0 auto;
   gap: 14px;
-  width: 380px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 340px;
   min-height: 0;
   padding: 30px 28px;
-}
-
-.home-box:not(.with-rooms) .home-card {
-  width: 480px;
-  padding: 34px 32px;
 }
 
 .home-hero {
@@ -304,8 +299,8 @@ input:focus {
 
 .home-public-rooms {
   flex: 0 0 auto;
-  width: 380px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 340px;
   min-width: 0;
   padding: 30px 24px;
   border-left: 1px solid var(--border);
@@ -313,6 +308,23 @@ input:focus {
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+}
+
+@media (min-width: 861px) {
+  .home-card {
+    width: 380px;
+    max-width: 100%;
+  }
+
+  .home-box:not(.with-rooms) .home-card {
+    width: 420px;
+    padding: 34px 32px;
+  }
+
+  .home-public-rooms {
+    width: 380px;
+    max-width: 100%;
+  }
 }
 
 .home-public-rooms h3 {
