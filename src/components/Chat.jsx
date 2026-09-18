@@ -83,7 +83,7 @@ export default function Chat({ messages, onSend, selfId, roster, className, onCl
                 <GameInviteText game={m.game} />
               ) : isEvent ? (
                 <span className="chat-text">
-                  {m.event === 'join' ? 'entrou na sala' : 'saiu da sala'}
+                  <strong>{m.nickname || 'Alguém'}</strong> {m.event === 'join' ? 'entrou na sala' : 'saiu da sala'}
                 </span>
               ) : (
                 <span className="chat-text">{m.text}</span>
