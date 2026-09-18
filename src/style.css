@@ -1503,6 +1503,10 @@ input:focus {
   line-height: 1.45;
 }
 
+.nickname-box {
+  width: min(360px, 92vw);
+}
+
 .nickname-box .invite-hint {
   margin-top: 8px;
   line-height: 1.45;
@@ -1512,6 +1516,10 @@ input:focus {
   width: 100%;
   box-sizing: border-box;
   margin-top: 16px;
+}
+
+.desktop-download-btn:hover {
+  background: var(--accent-gradient);
 }
 
 .desktop-download-btn:disabled {

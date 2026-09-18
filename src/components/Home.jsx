@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Download, LogIn, X } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import { saveSession, loadSession } from '../lib/storage.js';
 import { PublicRoomsRegistry } from '../lib/RoomClient.js';
 import { isDesktop, DESKTOP_DOWNLOAD_URL } from '../lib/platform.js';
@@ -164,7 +164,6 @@ export default function Home({ onJoin, invite }) {
               onClick={confirmJoinWithNickname}
               disabled={!dialogNickname.trim()}
             >
-              <LogIn size={16} />
               Entrar
             </button>
           </div>
