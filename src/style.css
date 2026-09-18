@@ -321,6 +321,7 @@ input:focus {
   flex-direction: column;
   gap: 8px;
   flex: 1;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
 }
@@ -329,6 +330,8 @@ input:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  min-width: 0;
   padding: 12px;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -1647,6 +1650,8 @@ input:focus {
   .home-public-rooms {
     border-left: none;
     border-top: 1px solid var(--border);
+    flex: 0 0 auto;
+    min-width: 0;
     max-width: 340px;
     width: 100%;
     max-height: 240px;
