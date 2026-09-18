@@ -24,6 +24,7 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
   const [screenOn, setScreenOn] = useState(false);
   const [isHost, setIsHost] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
+  const [hostId, setHostId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [screenSources, setScreenSources] = useState(null);
   const [leaveOpen, setLeaveOpen] = useState(false);
@@ -113,6 +114,9 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
     const onPublicToggle = (isPublic) => setIsPublic(isPublic);
     client.addEventListener('public-toggle', onPublicToggle);
 
+    const onHostInfo = (peerId) => setHostId(peerId);
+    client.addEventListener('host-info', onHostInfo);
+
     client.start().then(() => {
       setSelfId(client.peer.id);
       setReady(true);
@@ -130,6 +134,7 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
       client.removeEventListener('self-stream', onSelfStream);
       client.removeEventListener('chat', onChat);
       client.removeEventListener('public-toggle', onPublicToggle);
+      client.removeEventListener('host-info', onHostInfo);
       client.leave();
     };
   }, [nickname, roomCode]);
@@ -316,16 +321,7 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
 
       {isDesktop && <TitleBar />}
       <div className="topbar">
-        <div className="brand">
-          GustaShare
-          {isHost ? (
-            <span className="host-badge">Você é o host</span>
-          ) : ready && roster.length > 0 ? (
-            <span className="host-info">
-              {roster.find((m) => m.id !== selfId)?.nickname || 'Host'} é o host
-            </span>
-          ) : null}
-        </div>
+        <div className="brand">GustaShare</div>
         <button type="button" className="leave-btn" onClick={() => setLeaveOpen(true)}>
           <LogOut size={15} />
           <span className="leave-full">Abandonar sala</span>
@@ -356,6 +352,7 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
           selfId={selfId}
           streams={streams}
           selfStreams={selfStreams}
+          hostId={hostId}
         />
 
         <div className="grid-wrap">

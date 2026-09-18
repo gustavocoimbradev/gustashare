@@ -75,7 +75,7 @@ export default function Dock({
         </Tooltip>
 
         {isHost && (
-          <Tooltip label={isPublic ? 'Sala pública (clique para privada)' : 'Sala privada (clique para pública)'}>
+          <Tooltip label={isPublic ? 'Tornar sala privada' : 'Tornar sala pública'}>
             <button
               type="button"
               className={`dock-btn ${isPublic ? 'active' : ''}`}

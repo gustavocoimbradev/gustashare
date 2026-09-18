@@ -1,12 +1,12 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, Crown } from 'lucide-react';
 import useSpeaking from '../lib/useSpeaking.js';
 import { userColorStyle } from '../lib/userColor.js';
 import Avatar from './Avatar.jsx';
 import ClientBadge from './ClientBadge.jsx';
 import MicBadge from './MicBadge.jsx';
 
-function ParticipantRow({ nickname, isSelf, userId, platform, micStream }) {
+function ParticipantRow({ nickname, isSelf, userId, platform, micStream, isHost }) {
   const speaking = useSpeaking(micStream);
   const micOn = Boolean(micStream);
 
@@ -18,6 +18,7 @@ function ParticipantRow({ nickname, isSelf, userId, platform, micStream }) {
         {isSelf ? ' (você)' : ''}
       </span>
       <span className="participant-badges">
+        {isHost && <Crown size={14} className="host-icon" title="Host da sala" />}
         <ClientBadge platform={platform} />
         <MicBadge on={micOn} />
       </span>
@@ -25,7 +26,7 @@ function ParticipantRow({ nickname, isSelf, userId, platform, micStream }) {
   );
 }
 
-export default function ParticipantsSidebar({ roster, selfId, streams, selfStreams, className, onClose }) {
+export default function ParticipantsSidebar({ roster, selfId, streams, selfStreams, className, onClose, hostId }) {
   return (
     <div className={`participants ${className || ''}`}>
       <div className="participants-title">
@@ -46,6 +47,7 @@ export default function ParticipantsSidebar({ roster, selfId, streams, selfStrea
               isSelf={isSelf}
               platform={m.platform}
               micStream={micStream}
+              isHost={m.id === hostId}
             />
           );
         })}

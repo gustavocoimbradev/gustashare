@@ -77,6 +77,7 @@ export default class RoomClient extends EventTarget {
     this.peer = null;
     this.isHost = false;
     this.isPublic = false;
+    this.hostPeerId = null;
     this.hostConn = null;
     this.memberConns = new Map();
     this.roster = [];
@@ -123,9 +124,11 @@ export default class RoomClient extends EventTarget {
         settled = true;
         this.peer = hostPeer;
         this.isHost = true;
+        this.hostPeerId = this.peer.id;
         this._setupHostPeer();
         this.roster = [this._selfMember()];
         this.emit('roster', this.roster);
+        this.emit('host-info', this.hostPeerId);
         resolve();
       };
 
@@ -212,6 +215,8 @@ export default class RoomClient extends EventTarget {
 
     conn.on('open', () => {
       this._reconnecting = false;
+      this.hostPeerId = conn.peer;
+      this.emit('host-info', this.hostPeerId);
       sendHello();
       clearInterval(conn._helloIv);
       conn._helloIv = setInterval(sendHello, 1000);

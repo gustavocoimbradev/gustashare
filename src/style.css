@@ -188,6 +188,8 @@ input:focus {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 32px;
+  padding: 20px;
   min-height: 0;
 }
 
@@ -204,12 +206,32 @@ input:focus {
   box-shadow: var(--shadow-md);
 }
 
+.home-card > form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.home-card > form > * {
+  margin-bottom: 14px;
+}
+
+.home-card > form > *:last-child {
+  margin-bottom: 0;
+}
+
 .home-hero,
-.home-fields,
+.home-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .home-actions {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  margin-top: 8px;
 }
 
 .home-card h1 {
@@ -267,13 +289,21 @@ input:focus {
 }
 
 .home-public-rooms {
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid var(--border);
+  flex: 0 1 340px;
+  background: var(--surface);
+  padding: 30px 28px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 100%;
+  overflow-y: auto;
 }
 
 .home-public-rooms h3 {
-  margin: 0 0 12px;
+  margin: 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-dim);
@@ -285,6 +315,9 @@ input:focus {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .public-room-card {
@@ -1047,6 +1080,11 @@ input:focus {
   align-items: center;
   gap: 4px;
   margin-left: auto;
+  flex-shrink: 0;
+}
+
+.host-icon {
+  color: #fbbf24;
   flex-shrink: 0;
 }
 
