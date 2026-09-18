@@ -10,6 +10,8 @@ export default function Home({ onJoin, invite }) {
   const [nickname, setNickname] = useState(saved.nickname);
   const [roomCode, setRoomCode] = useState(invite?.roomCode || saved.roomCode || '');
   const [publicRooms, setPublicRooms] = useState([]);
+  const [joinDialog, setJoinDialog] = useState(null);
+  const [dialogNickname, setDialogNickname] = useState('');
 
   useEffect(() => {
     window.gustashare?.setWindowMode('home');
@@ -38,11 +40,20 @@ export default function Home({ onJoin, invite }) {
   function joinPublicRoom(room) {
     const nick = nickname.trim();
     if (!nick) {
-      alert('Digite seu nickname primeiro');
+      setDialogNickname('');
+      setJoinDialog(room);
       return;
     }
     saveSession(nick, room.roomCode);
     onJoin(nick, room.roomCode);
+  }
+
+  function confirmJoinWithNickname() {
+    const nick = dialogNickname.trim();
+    if (!nick) return;
+    setJoinDialog(null);
+    saveSession(nick, joinDialog.roomCode);
+    onJoin(nick, joinDialog.roomCode);
   }
 
   return (
@@ -110,6 +121,35 @@ export default function Home({ onJoin, invite }) {
           )}
         </div>
       </div>
+
+      {joinDialog && (
+        <div className="picker-backdrop" onClick={() => setJoinDialog(null)}>
+          <div className="invite-box" onClick={(e) => e.stopPropagation()}>
+            <h2>Qual é seu nickname?</h2>
+            <p className="invite-hint">Digite um nome para entrar na sala</p>
+            <input
+              type="text"
+              placeholder="Seu nickname"
+              value={dialogNickname}
+              onChange={(e) => setDialogNickname(e.target.value)}
+              maxLength={24}
+              autoFocus
+              onKeyPress={(e) => e.key === 'Enter' && confirmJoinWithNickname()}
+            />
+            <button
+              type="button"
+              className="leave-confirm"
+              onClick={confirmJoinWithNickname}
+              disabled={!dialogNickname.trim()}
+            >
+              Entrar
+            </button>
+            <button type="button" className="leave-cancel" onClick={() => setJoinDialog(null)}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
