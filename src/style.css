@@ -207,16 +207,17 @@ input:focus {
   display: flex;
   flex-direction: column;
   align-self: flex-start;
+  flex: 0 0 auto;
   gap: 14px;
-  width: 100%;
-  max-width: 440px;
+  width: 440px;
+  max-width: 100%;
   min-height: 0;
   padding: 30px 28px;
 }
 
 .home-box:not(.with-rooms) .home-card {
-  max-width: 500px;
-  padding: 36px 34px;
+  width: 480px;
+  padding: 34px 32px;
 }
 
 .home-hero {
