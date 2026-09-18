@@ -642,6 +642,9 @@ export default class RoomClient extends EventTarget {
   async setCam(on) {
     if (on) {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getVideoTracks().forEach((track) => {
+        track.addEventListener('ended', () => this.setCam(false));
+      });
       this._setLocalStream('cam', stream);
     } else {
       this._setLocalStream('cam', null);
@@ -651,6 +654,9 @@ export default class RoomClient extends EventTarget {
   async setMic(on) {
     if (on) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getAudioTracks().forEach((track) => {
+        track.addEventListener('ended', () => this.setMic(false));
+      });
       this._setLocalStream('mic', stream);
     } else {
       this._setLocalStream('mic', null);
