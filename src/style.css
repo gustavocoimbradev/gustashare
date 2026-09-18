@@ -566,8 +566,8 @@ input:focus {
   position: absolute;
   right: 10px;
   bottom: 10px;
-  width: 80px;
-  height: 80px;
+  width: 60px;
+  height: 60px;
   aspect-ratio: 1 / 1;
   border-radius: 50%;
   overflow: hidden;
