@@ -68,9 +68,9 @@ export default function Chat({ messages, onSend, selfId, roster, className, onCl
             <div
               key={i}
               className={`chat-message ${m.id === selfId ? 'own' : ''} ${grouped ? 'grouped' : ''} ${isEvent ? 'event' : ''}`}
-              style={userColorStyle(m.id)}
+              style={isEvent ? {} : userColorStyle(m.id)}
             >
-              {!grouped && (
+              {!grouped && !isEvent && (
                 <div className="chat-author">
                   <Avatar nickname={m.nickname} userId={m.id} size="sm" />
                   <span className="chat-author-text">
@@ -82,8 +82,8 @@ export default function Chat({ messages, onSend, selfId, roster, className, onCl
               {isGame ? (
                 <GameInviteText game={m.game} />
               ) : isEvent ? (
-                <span className="chat-text">
-                  <strong>{m.nickname || 'Alguém'}</strong> {m.event === 'join' ? 'entrou na sala' : 'saiu da sala'}
+                <span className="chat-text event-text">
+                  {m.nickname || 'Alguém'} {m.event === 'join' ? 'entrou na sala' : 'saiu da sala'}
                 </span>
               ) : (
                 <span className="chat-text">{m.text}</span>

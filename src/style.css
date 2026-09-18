@@ -1212,9 +1212,15 @@ input:focus {
   width: 100%;
 }
 
-.chat-message.event .chat-text {
-  color: var(--text-dim);
-  font-weight: 600;
+.chat-message.event {
+  justify-content: center;
+}
+
+.chat-message.event .chat-text,
+.event-text {
+  color: #4a7dff;
+  font-weight: 500;
+  font-size: 13px;
 }
 
 .chat-form {
