@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
 import { saveSession, loadSession } from '../lib/storage.js';
+import { PublicRoomsRegistry } from '../lib/RoomClient.js';
 import { isDesktop, DESKTOP_DOWNLOAD_URL } from '../lib/platform.js';
 import TitleBar from './TitleBar.jsx';
 
@@ -8,6 +9,7 @@ export default function Home({ onJoin, invite }) {
   const saved = loadSession();
   const [nickname, setNickname] = useState(saved.nickname);
   const [roomCode, setRoomCode] = useState(invite?.roomCode || saved.roomCode || '');
+  const [publicRooms, setPublicRooms] = useState([]);
 
   useEffect(() => {
     window.gustashare?.setWindowMode('home');
@@ -18,6 +20,10 @@ export default function Home({ onJoin, invite }) {
     } else if (saved.roomCode) {
       setRoomCode(saved.roomCode);
     }
+
+    PublicRoomsRegistry.cleanup();
+    const rooms = Object.values(PublicRoomsRegistry.getAll());
+    setPublicRooms(rooms.sort((a, b) => b.createdAt - a.createdAt));
   }, [invite]);
 
   function submit(e) {
@@ -29,46 +35,80 @@ export default function Home({ onJoin, invite }) {
     onJoin(nick, code);
   }
 
+  function joinPublicRoom(room) {
+    const nick = nickname.trim();
+    if (!nick) {
+      alert('Digite seu nickname primeiro');
+      return;
+    }
+    saveSession(nick, room.roomCode);
+    onJoin(nick, room.roomCode);
+  }
+
   return (
     <div className="home">
       {isDesktop && <TitleBar canMaximize={false} />}
       <div className="home-main">
-        <form className="home-card" onSubmit={submit}>
-        <div className="home-hero">
-          <h1>GustaShare</h1>
-          {invite?.roomCode ? (
-            <p className="invite-banner">
-              Você foi convidado para a sala <strong>{invite.roomCode}</strong>
-            </p>
-          ) : null}
-        </div>
-        <div className="home-fields">
-          <input
-            placeholder="Seu nickname"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            maxLength={24}
-            autoFocus
-          />
-          {!invite?.roomCode && (
-            <input
-              placeholder="Código da sala"
-              value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value)}
-              maxLength={24}
-            />
+        <div className="home-card">
+          <form onSubmit={submit}>
+            <div className="home-hero">
+              <h1>GustaShare</h1>
+              {invite?.roomCode ? (
+                <p className="invite-banner">
+                  Você foi convidado para a sala <strong>{invite.roomCode}</strong>
+                </p>
+              ) : null}
+            </div>
+            <div className="home-fields">
+              <input
+                placeholder="Seu nickname"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                maxLength={24}
+                autoFocus
+              />
+              {!invite?.roomCode && (
+                <input
+                  placeholder="Código da sala"
+                  value={roomCode}
+                  onChange={(e) => setRoomCode(e.target.value)}
+                  maxLength={24}
+                />
+              )}
+            </div>
+            <div className="home-actions">
+              <button type="submit">Entrar</button>
+              {!isDesktop && (
+                <a className="home-download" href={DESKTOP_DOWNLOAD_URL}>
+                  <Download size={14} />
+                  Baixar versão desktop
+                </a>
+              )}
+            </div>
+          </form>
+
+          {publicRooms.length > 0 && (
+            <div className="home-public-rooms">
+              <h3>Salas Públicas</h3>
+              <div className="public-rooms-list">
+                {publicRooms.map((room) => (
+                  <button
+                    key={room.roomCode}
+                    type="button"
+                    className="public-room-card"
+                    onClick={() => joinPublicRoom(room)}
+                  >
+                    <div className="room-info">
+                      <div className="room-name">{room.roomCode}</div>
+                      <div className="room-host">{room.hostName || 'Host desconhecido'}</div>
+                    </div>
+                    <div className="room-count">{room.participantCount} {room.participantCount === 1 ? 'pessoa' : 'pessoas'}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
-        <div className="home-actions">
-          <button type="submit">Entrar</button>
-          {!isDesktop && (
-            <a className="home-download" href={DESKTOP_DOWNLOAD_URL}>
-              <Download size={14} />
-              Baixar versão desktop
-            </a>
-          )}
-        </div>
-        </form>
       </div>
     </div>
   );

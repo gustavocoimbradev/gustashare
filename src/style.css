@@ -266,6 +266,73 @@ input:focus {
   text-decoration: none;
 }
 
+.home-public-rooms {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.home-public-rooms h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.public-rooms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.public-room-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  text-align: left;
+}
+
+.public-room-card:hover {
+  border-color: var(--accent-2);
+  background: #2c303a;
+}
+
+.room-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.room-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-host {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.room-count {
+  flex-shrink: 0;
+  margin-left: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
 .home-download:hover {
   color: var(--text);
 }

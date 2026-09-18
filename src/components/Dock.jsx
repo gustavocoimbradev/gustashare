@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mic, MicOff, Video, VideoOff, MonitorUp, MonitorX, Gamepad2, Share2, Users, MessageCircle } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, MonitorUp, MonitorX, Gamepad2, Share2, Users, MessageCircle, Globe, Lock } from 'lucide-react';
 import Tooltip from './Tooltip.jsx';
 import InviteModal from './InviteModal.jsx';
 import GamesModal from './GamesModal.jsx';
@@ -18,6 +18,9 @@ export default function Dock({
   chatOpen,
   onToggleUsers,
   onToggleChat,
+  isHost,
+  isPublic,
+  onTogglePublic,
 }) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [gamesOpen, setGamesOpen] = useState(false);
@@ -70,6 +73,18 @@ export default function Dock({
             <Gamepad2 size={20} />
           </button>
         </Tooltip>
+
+        {isHost && (
+          <Tooltip label={isPublic ? 'Sala pública (clique para privada)' : 'Sala privada (clique para pública)'}>
+            <button
+              type="button"
+              className={`dock-btn ${isPublic ? 'active' : ''}`}
+              onClick={onTogglePublic}
+            >
+              {isPublic ? <Globe size={20} /> : <Lock size={20} />}
+            </button>
+          </Tooltip>
+        )}
 
         <span className="dock-desktop-only">
           <Tooltip label="Convidar alguém">

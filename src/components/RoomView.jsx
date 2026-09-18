@@ -22,6 +22,8 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
   const [micOn, setMicOn] = useState(false);
   const [camOn, setCamOn] = useState(false);
   const [screenOn, setScreenOn] = useState(false);
+  const [isHost, setIsHost] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
   const [messages, setMessages] = useState([]);
   const [screenSources, setScreenSources] = useState(null);
   const [leaveOpen, setLeaveOpen] = useState(false);
@@ -108,9 +110,13 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
     client.addEventListener('self-stream', onSelfStream);
     client.addEventListener('chat', onChat);
 
+    const onPublicToggle = (isPublic) => setIsPublic(isPublic);
+    client.addEventListener('public-toggle', onPublicToggle);
+
     client.start().then(() => {
       setSelfId(client.peer.id);
       setReady(true);
+      setIsHost(client.isHost);
     });
 
     return () => {
@@ -123,6 +129,7 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
       client.removeEventListener('peer-left', onPeerLeft);
       client.removeEventListener('self-stream', onSelfStream);
       client.removeEventListener('chat', onChat);
+      client.removeEventListener('public-toggle', onPublicToggle);
       client.leave();
     };
   }, [nickname, roomCode]);
@@ -258,6 +265,10 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
     setScreenSources(null);
   }
 
+  function togglePublic() {
+    clientRef.current.setPublic(!isPublic);
+  }
+
   function sendChat(text) {
     clientRef.current.sendChat(text);
   }
@@ -372,6 +383,9 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
             chatOpen={mobilePanel === 'chat'}
             onToggleUsers={() => toggleMobilePanel('users')}
             onToggleChat={() => toggleMobilePanel('chat')}
+            isHost={isHost}
+            isPublic={isPublic}
+            onTogglePublic={togglePublic}
           />
         </div>
 

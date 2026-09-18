@@ -12,7 +12,8 @@
       "Bash(git commit -m 'fix: show user name when joining or leaving room *)",
       "Bash(git commit -m 'docs: simplify README - focus on actual features, remove jargon *)",
       "Bash(git commit -m 'docs: remove auto-update from feature table - irrelevant detail *)",
-      "Bash(git commit -m 'fix: remove ghost participants from grid and improve avatar readability *)"
+      "Bash(git commit -m 'fix: remove ghost participants from grid and improve avatar readability *)",
+      "Bash(git commit -m 'feat: add public rooms feature with discovery and listing *)"
     ]
   }
 }

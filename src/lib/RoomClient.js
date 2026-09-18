@@ -4,6 +4,51 @@ import { PEER_OPTIONS, prepareScreenTrack, tuneScreenSender } from './webrtc.js'
 
 const HOST_PREFIX = 'gsh1_';
 
+export class PublicRoomsRegistry {
+  static KEY = 'gsh_public_rooms';
+
+  static add(roomCode, hostName, participantCount) {
+    const rooms = this.getAll();
+    rooms[roomCode] = {
+      roomCode,
+      hostName,
+      participantCount,
+      createdAt: Date.now(),
+    };
+    localStorage.setItem(this.KEY, JSON.stringify(rooms));
+  }
+
+  static remove(roomCode) {
+    const rooms = this.getAll();
+    delete rooms[roomCode];
+    localStorage.setItem(this.KEY, JSON.stringify(rooms));
+  }
+
+  static getAll() {
+    try {
+      return JSON.parse(localStorage.getItem(this.KEY) || '{}');
+    } catch {
+      return {};
+    }
+  }
+
+  static updateParticipantCount(roomCode, count) {
+    const rooms = this.getAll();
+    if (rooms[roomCode]) {
+      rooms[roomCode].participantCount = count;
+      localStorage.setItem(this.KEY, JSON.stringify(rooms));
+    }
+  }
+
+  static cleanup() {
+    const rooms = this.getAll();
+    const now = Date.now();
+    const expiredRooms = Object.keys(rooms).filter((code) => now - rooms[code].createdAt > 24 * 60 * 60 * 1000);
+    expiredRooms.forEach((code) => delete rooms[code]);
+    localStorage.setItem(this.KEY, JSON.stringify(rooms));
+  }
+}
+
 function hostIdFor(roomCode) {
   const clean = roomCode.toLowerCase().replace(/[^a-z0-9]/g, '');
   return `${HOST_PREFIX}${clean || 'sala'}`;
@@ -31,6 +76,7 @@ export default class RoomClient extends EventTarget {
     this.hostId = hostIdFor(roomCode);
     this.peer = null;
     this.isHost = false;
+    this.isPublic = false;
     this.hostConn = null;
     this.memberConns = new Map();
     this.roster = [];
@@ -364,6 +410,9 @@ export default class RoomClient extends EventTarget {
     for (const conn of this.memberConns.values()) {
       if (conn.open) conn.send({ type: 'roster', roster: this.roster, cameraPositions });
     }
+    if (this.isPublic) {
+      PublicRoomsRegistry.updateParticipantCount(this.roomCode, this.roster.length);
+    }
   }
 
   _broadcastChat(msg, excludeConn) {
@@ -686,12 +735,26 @@ export default class RoomClient extends EventTarget {
     if (old) old.getTracks().forEach((t) => t.stop());
   }
 
+  setPublic(isPublic) {
+    if (!this.isHost) return;
+    this.isPublic = isPublic;
+    this.emit('public-toggle', this.isPublic);
+    if (isPublic) {
+      PublicRoomsRegistry.add(this.roomCode, this.nickname, this.roster.length);
+    } else {
+      PublicRoomsRegistry.remove(this.roomCode);
+    }
+  }
+
   leave() {
     if (this.stopped) return;
     this.stopped = true;
     this._unbindPageLeave();
     this._stopHeartbeat();
     clearTimeout(this._hostWaitTimer);
+    if (this.isPublic) {
+      PublicRoomsRegistry.remove(this.roomCode);
+    }
     try {
       if (!this.isHost && this.hostConn?.open) {
         this.hostConn.send({ type: 'bye', id: this.peer?.id });
