@@ -419,6 +419,9 @@ input:focus {
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-size: 18px;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -426,6 +429,20 @@ input:focus {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.host-badge,
+.host-info {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(59, 165, 93, 0.15);
+  color: #3ba55d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background-clip: unset;
+  -webkit-background-clip: unset;
 }
 
 .leave-btn {

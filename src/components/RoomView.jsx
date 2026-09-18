@@ -316,7 +316,16 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
 
       {isDesktop && <TitleBar />}
       <div className="topbar">
-        <div className="brand">GustaShare</div>
+        <div className="brand">
+          GustaShare
+          {isHost ? (
+            <span className="host-badge">Você é o host</span>
+          ) : ready && roster.length > 0 ? (
+            <span className="host-info">
+              {roster.find((m) => m.id !== selfId)?.nickname || 'Host'} é o host
+            </span>
+          ) : null}
+        </div>
         <button type="button" className="leave-btn" onClick={() => setLeaveOpen(true)}>
           <LogOut size={15} />
           <span className="leave-full">Abandonar sala</span>
