@@ -217,7 +217,7 @@ input:focus {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  margin-top: 8px;
+  margin-top: 22px;
 }
 
 .home-card h1 {
