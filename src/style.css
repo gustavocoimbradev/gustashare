@@ -214,6 +214,11 @@ input:focus {
   padding: 30px 28px;
 }
 
+.home-box:not(.with-rooms) .home-card {
+  max-width: 500px;
+  padding: 36px 34px;
+}
+
 .home-hero {
   display: flex;
   flex-direction: column;
