@@ -7,6 +7,43 @@ import ClientBadge from './ClientBadge.jsx';
 import HostBadge from './HostBadge.jsx';
 import MicBadge from './MicBadge.jsx';
 
+function VolumeControl({ label, mutedLabel, volume, silent, open, onToggleOpen, onChange }) {
+  const VolumeIcon = silent ? VolumeX : volume < 0.4 ? Volume1 : Volume2;
+  const sliderValue = silent ? 0 : volume;
+  return (
+    <div className="tile-volume-wrap">
+      <Tooltip label={silent ? mutedLabel : label}>
+        <button
+          type="button"
+          className={`tile-icon-btn ${silent ? 'muted' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleOpen();
+          }}
+          aria-label={silent ? mutedLabel : label}
+        >
+          <VolumeIcon size={15} />
+        </button>
+      </Tooltip>
+      {open && (
+        <div className="tile-volume-popup" onClick={(e) => e.stopPropagation()}>
+          <input
+            className="tile-volume tile-volume-vertical"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={sliderValue}
+            style={{ '--fill': `${sliderValue * 100}%` }}
+            onChange={onChange}
+            aria-label={label}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Tile({
   nickname,
   isSelf,
@@ -24,9 +61,12 @@ export default function Tile({
   const pipRef = useRef(null);
   const audioRef = useRef(null);
   const stageRef = useRef(null);
-  const lastVolumeRef = useRef(1);
-  const [volume, setVolume] = useState(1);
-  const [muted, setMuted] = useState(false);
+  const [micVolume, setMicVolume] = useState(1);
+  const [micMuted, setMicMuted] = useState(false);
+  const [streamVolume, setStreamVolume] = useState(1);
+  const [streamMuted, setStreamMuted] = useState(false);
+  const [micSliderOpen, setMicSliderOpen] = useState(false);
+  const [streamSliderOpen, setStreamSliderOpen] = useState(false);
   const [hover, setHover] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
@@ -35,11 +75,18 @@ export default function Tile({
 
   const mainStream = screenStream || camStream;
   const showPip = !!screenStream && !!camStream;
-  const silent = muted || volume === 0;
-  // Transmissão (áudio embutido no vídeo) só toca no card focado — evita que
-  // o som de quem começa a compartilhar tela estoure sem o usuário escolher.
-  // O mic (voz) da pessoa não é afetado por isso, só pelo "silent" manual.
-  const streamSilent = silent || !focused;
+  const micSilent = micMuted || micVolume === 0;
+  // Volume da transmissão é independente do mic: só toca quando o card está
+  // focado (assistindo), e mesmo assim pode ser silenciada manualmente.
+  const streamManualSilent = streamMuted || streamVolume === 0;
+  const streamSilent = !focused || streamManualSilent;
+
+  useEffect(() => {
+    if (!hover) {
+      setMicSliderOpen(false);
+      setStreamSliderOpen(false);
+    }
+  }, [hover]);
 
   useEffect(() => {
     setVideoReady(false);
@@ -73,17 +120,20 @@ export default function Tile({
   }, [micStream]);
 
   useEffect(() => {
-    const micLevel = silent ? 0 : volume;
+    const level = micSilent ? 0 : micVolume;
     if (audioRef.current) {
-      audioRef.current.muted = isSelf || silent;
-      audioRef.current.volume = micLevel;
+      audioRef.current.muted = isSelf || micSilent;
+      audioRef.current.volume = level;
     }
-    const streamLevel = streamSilent ? 0 : volume;
+  }, [micVolume, micSilent, isSelf]);
+
+  useEffect(() => {
+    const level = streamSilent ? 0 : streamVolume;
     if (videoRef.current) {
       videoRef.current.muted = isSelf || streamSilent;
-      videoRef.current.volume = streamLevel;
+      videoRef.current.volume = level;
     }
-  }, [volume, silent, streamSilent, isSelf]);
+  }, [streamVolume, streamSilent, isSelf]);
 
   useEffect(() => {
     function onFullscreenChange() {
@@ -121,7 +171,7 @@ export default function Tile({
         return;
       }
     } catch {
-      // iOS / browsers that only fullscreen <video> — overlay local
+      // iOS / browsers que só dão fullscreen em <video> — cai pro overlay local
     }
     setExpanded(true);
   }
@@ -144,30 +194,17 @@ export default function Tile({
     }
   }
 
-  function toggleMute() {
-    setMuted((wasMuted) => {
-      if (wasMuted) {
-        if (volume === 0) setVolume(lastVolumeRef.current || 1);
-        return false;
-      }
-      if (volume > 0) lastVolumeRef.current = volume;
-      return true;
-    });
-  }
-
-  function onVolumeChange(e) {
+  function onMicVolumeChange(e) {
     const next = parseFloat(e.target.value);
-    setVolume(next);
-    if (next === 0) {
-      setMuted(true);
-      return;
-    }
-    lastVolumeRef.current = next;
-    setMuted(false);
+    setMicVolume(next);
+    setMicMuted(next === 0);
   }
 
-  const sliderValue = silent ? 0 : volume;
-  const VolumeIcon = silent ? VolumeX : volume < 0.4 ? Volume1 : Volume2;
+  function onStreamVolumeChange(e) {
+    const next = parseFloat(e.target.value);
+    setStreamVolume(next);
+    setStreamMuted(next === 0);
+  }
 
   return (
     <div
@@ -205,16 +242,9 @@ export default function Tile({
             <X size={18} />
           </button>
         )}
-
-        {focused && !expanded && (
-          <button type="button" className="tile-stop-watching" onClick={stopWatching}>
-            <MonitorX size={15} />
-            Parar de assistir
-          </button>
-        )}
       </div>
 
-      <audio ref={audioRef} autoPlay muted={isSelf || silent} />
+      <audio ref={audioRef} autoPlay muted={isSelf || micSilent} />
 
       <div className="tile-name">
         <span>
@@ -226,45 +256,62 @@ export default function Tile({
         <MicBadge on={Boolean(micStream)} />
       </div>
 
-      {!isSelf && silent && !hover && (
-        <div className="tile-muted-badge" title="Silenciado">
+      {!isSelf && micSilent && !hover && (
+        <div className="tile-muted-badge" title="Mic silenciado">
           <VolumeX size={13} />
         </div>
       )}
 
       {hover && (
         <div className="tile-overlay">
-          {mainStream && (
+          {focused && mainStream && (
             <Tooltip label="Tela cheia">
               <button type="button" className="tile-icon-btn" onClick={goFullscreen} aria-label="Tela cheia">
                 <Maximize2 size={14} />
               </button>
             </Tooltip>
           )}
+
+          {focused && (
+            <Tooltip label="Parar de assistir">
+              <button type="button" className="tile-icon-btn" onClick={stopWatching} aria-label="Parar de assistir">
+                <MonitorX size={16} />
+              </button>
+            </Tooltip>
+          )}
+
+          {focused && !isSelf && (
+            <VolumeControl
+              label="Silenciar transmissão"
+              mutedLabel="Ativar som da transmissão"
+              volume={streamVolume}
+              silent={streamManualSilent}
+              open={streamSliderOpen}
+              onToggleOpen={() =>
+                setStreamSliderOpen((o) => {
+                  if (!o) setMicSliderOpen(false);
+                  return !o;
+                })
+              }
+              onChange={onStreamVolumeChange}
+            />
+          )}
+
           {!isSelf && (
-            <div className="tile-volume-wrap">
-              <Tooltip label={silent ? 'Ativar som' : 'Silenciar'}>
-                <button
-                  type="button"
-                  className={`tile-icon-btn ${silent ? 'muted' : ''}`}
-                  onClick={toggleMute}
-                  aria-label={silent ? 'Ativar som' : 'Silenciar'}
-                >
-                  <VolumeIcon size={15} />
-                </button>
-              </Tooltip>
-              <input
-                className="tile-volume"
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={sliderValue}
-                style={{ '--fill': `${sliderValue * 100}%` }}
-                onChange={onVolumeChange}
-                aria-label="Volume"
-              />
-            </div>
+            <VolumeControl
+              label="Silenciar microfone"
+              mutedLabel="Ativar microfone"
+              volume={micVolume}
+              silent={micSilent}
+              open={micSliderOpen}
+              onToggleOpen={() =>
+                setMicSliderOpen((o) => {
+                  if (!o) setStreamSliderOpen(false);
+                  return !o;
+                })
+              }
+              onChange={onMicVolumeChange}
+            />
           )}
         </div>
       )}

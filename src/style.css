@@ -977,29 +977,6 @@ input:focus {
   color: var(--text);
 }
 
-.tile-stop-watching {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 6;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: var(--radius-full);
-  background: rgba(26, 29, 36, 0.88);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: var(--shadow-md);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.tile-stop-watching:hover {
-  background: rgba(26, 29, 36, 0.98);
-}
 
 .avatar {
   width: 72px;
@@ -1087,9 +1064,35 @@ input:focus {
 }
 
 .tile-volume-wrap {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 2px;
+}
+
+.tile-volume-popup {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  width: 40px;
+  height: 108px;
+  transform: translateX(-50%);
+  border-radius: var(--radius-full);
+  background: rgba(26, 29, 36, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: var(--shadow-md);
+  z-index: 8;
+}
+
+.tile-volume.tile-volume-vertical {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 84px;
+  margin: 0;
+  transform: translate(-50%, -50%) rotate(-90deg);
 }
 
 .tile-volume {
