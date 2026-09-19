@@ -1,6 +1,6 @@
 import Peer from 'peerjs';
 import { isDesktop } from './platform.js';
-import { PEER_OPTIONS, prepareScreenTrack, tuneScreenSender } from './webrtc.js';
+import { PEER_OPTIONS, prepareScreenTrack, tuneScreenSender, screenBitrateForViewers } from './webrtc.js';
 
 const HOST_PREFIX = 'gsh1_';
 
@@ -211,6 +211,13 @@ export default class RoomClient extends EventTarget {
       clearInterval(conn._helloIv);
       clearTimeout(this._hostWaitTimer);
       this._announceMediaReady();
+      // Sempre que a conexão com o host (re)nasce — primeiro join ou
+      // reconexão após queda — o Peer subjacente pode ter sido recriado,
+      // o que derruba as chamadas de mídia diretas com os demais membros
+      // mesmo que o roster continue "igual" (ninguém saiu, do ponto de
+      // vista do diff). Reempurra tudo que estamos compartilhando pra
+      // quem já conhecemos, sem depender de detectar alguém como "novo".
+      this._resyncStreamsWithRoster();
     };
 
     conn.on('open', () => {
@@ -334,6 +341,7 @@ export default class RoomClient extends EventTarget {
     this._broadcastRoster();
     this.emit('roster', this.roster);
     this.emit('peer-left', left);
+    this._retuneScreenCalls();
   }
 
   _closeCallsWith(peerId) {
@@ -482,8 +490,13 @@ export default class RoomClient extends EventTarget {
     for (const id of prevIds) {
       if (currentIds.has(id)) continue;
       const left = prevRoster.find((m) => m.id === id) || { id };
+      // Sem isso, a call de saída pra quem saiu fica pra sempre no mapa
+      // (nunca mais usada, mas nunca limpa) — e infla artificialmente a
+      // contagem de espectadores da tela usada pra dividir a banda.
+      this._closeCallsWith(id);
       this.emit('peer-left', left);
     }
+    this._retuneScreenCalls();
   }
 
   _announceMediaReady() {
@@ -517,6 +530,17 @@ export default class RoomClient extends EventTarget {
         // ignore
       }
     });
+  }
+
+  // Reempurra nossas streams ativas (tela/cam/mic) pra todo mundo que já
+  // está no roster — não só pra quem acabou de "entrar". Necessário depois
+  // de qualquer reconexão, já que destruir/recriar o Peer local derruba as
+  // RTCPeerConnections com todo mundo, não só com o host.
+  _resyncStreamsWithRoster() {
+    for (const m of this.roster) {
+      if (!this.peer || m.id === this.peer.id) continue;
+      this._callPeerWithActiveStreams(m.id);
+    }
   }
 
   _callPeerWithActiveStreams(peerId) {
@@ -564,12 +588,65 @@ export default class RoomClient extends EventTarget {
         setTimeout(() => this._callPeer(peerId, type, this.localStreams[type], attempt + 1), 800);
       }
     });
+    this._watchCallHealth(call, key, peerId, type, attempt);
 
     if (type === 'screen') {
       setTimeout(() => {
-        if (this.outgoingCalls.get(key) === call) tuneScreenSender(call);
+        if (this.outgoingCalls.get(key) === call) this._retuneScreenCalls();
       }, 500);
     }
+  }
+
+  // Mesh puro sem TURN/SFU: compartilhar tela sobe uma cópia do vídeo pra
+  // CADA espectador — sem isso, o upload de quem compartilha satura assim
+  // que a 2ª ou 3ª pessoa entra numa rede residencial comum, e a conexão
+  // "trava"/"não conecta" mesmo com o sinal WebRTC ok. Divide o orçamento
+  // de banda entre quem está de fato assistindo agora.
+  _screenViewerCount() {
+    let n = 0;
+    for (const key of this.outgoingCalls.keys()) {
+      if (key.endsWith(':screen')) n++;
+    }
+    return n;
+  }
+
+  _retuneScreenCalls() {
+    const viewers = this._screenViewerCount();
+    if (!viewers) return;
+    const bitrate = screenBitrateForViewers(viewers);
+    for (const [key, call] of this.outgoingCalls) {
+      if (key.endsWith(':screen')) tuneScreenSender(call, bitrate);
+    }
+  }
+
+  // `call.on('error')` só cobre falhas de protocolo do PeerJS — quando a
+  // negociação ICE trava ou falha (NAT ruim, rede instável), a call fica
+  // "pendurada" sem nunca emitir erro, e quem entrou depois nunca vê a
+  // tela/câmera. Observa o estado da RTCPeerConnection e refaz a call.
+  _watchCallHealth(call, key, peerId, type, attempt) {
+    setTimeout(() => {
+      if (this.outgoingCalls.get(key) !== call) return;
+      const pc = call.peerConnection;
+      if (!pc) return;
+      let retried = false;
+      const retry = () => {
+        if (retried || this.stopped) return;
+        if (pc.connectionState !== 'failed' && pc.iceConnectionState !== 'failed') return;
+        retried = true;
+        if (this.outgoingCalls.get(key) !== call) return;
+        this.outgoingCalls.delete(key);
+        try {
+          call.close();
+        } catch {
+          // ignore
+        }
+        if (attempt < 5 && this.localStreams[type]) {
+          this._callPeer(peerId, type, this.localStreams[type], attempt + 1);
+        }
+      };
+      pc.addEventListener('connectionstatechange', retry);
+      pc.addEventListener('iceconnectionstatechange', retry);
+    }, 150);
   }
 
   // ----- Reeleicao de host -----
@@ -614,6 +691,10 @@ export default class RoomClient extends EventTarget {
       this.roster = [this._selfMember(), ...othersFromPreviousRoster];
       this._setupHostPeer();
       this.emit('roster', this.roster);
+      // Viramos host com um Peer novo (id fixo, mas objeto recriado) — as
+      // chamadas de mídia diretas que tínhamos com os demais membros, de
+      // quando éramos um membro comum, morreram junto. Reestabelece.
+      this._resyncStreamsWithRoster();
     });
     hostPeer.on('error', (err) => {
       if (err.type === 'unavailable-id') {
@@ -625,14 +706,20 @@ export default class RoomClient extends EventTarget {
     });
   }
 
-  _retryJoin() {
+  // Reconecta como membro comum. Tenta reaproveitar o MESMO id de peer que
+  // já tínhamos — se trocarmos de id a cada reconexão, todo mundo na sala
+  // vê a gente "sair e entrar de novo" (o id antigo some do roster, um novo
+  // aparece), mesmo sem ter saído de verdade. Só cai pra um id novo se o
+  // broker ainda não liberou o antigo.
+  _retryJoin(useFreshId = false) {
     if (this.stopped) return;
+    const previousId = !useFreshId && !this.isHost ? this.peer?.id : null;
     try {
       this.peer?.destroy();
     } catch {
       // ignore
     }
-    const peer = new Peer(PEER_OPTIONS);
+    const peer = previousId ? new Peer(previousId, PEER_OPTIONS) : new Peer(PEER_OPTIONS);
     peer.on('open', () => {
       if (this.stopped) {
         peer.destroy();
@@ -643,8 +730,13 @@ export default class RoomClient extends EventTarget {
       this._setupCommonPeerHandlers();
       this._connectToHost();
     });
-    peer.on('error', () => {
-      setTimeout(() => this._retryJoin(), 800);
+    peer.on('error', (err) => {
+      if (previousId && err.type === 'unavailable-id') {
+        // id antigo ainda preso no broker — tenta de novo já com um novo id
+        setTimeout(() => this._retryJoin(true), 400);
+        return;
+      }
+      setTimeout(() => this._retryJoin(useFreshId), 800);
     });
   }
 

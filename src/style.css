@@ -275,15 +275,23 @@ input:focus {
 }
 
 .invite-banner {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--text-dim);
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 2px 0 0;
+  padding: 11px 14px;
+  border: 1px solid rgba(59, 165, 93, 0.5);
+  border-radius: var(--radius-sm);
+  background: rgba(59, 165, 93, 0.08);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--accent-green);
   text-align: center;
 }
 
 .invite-banner strong {
-  color: var(--text);
+  color: inherit;
+  font-weight: 700;
 }
 
 .home-download {
