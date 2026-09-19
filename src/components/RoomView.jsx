@@ -11,6 +11,7 @@ import { playJoinSound, playLeaveSound, playChatSound, playMediaOnSound, playMic
 import { captureWindowNative } from '../lib/nativeCapture.js';
 import { SCREEN_DISPLAY_MEDIA } from '../lib/webrtc.js';
 import { isDesktop } from '../lib/platform.js';
+import { isPermanentRoomName } from '../lib/permanentRooms.js';
 
 const STREAM_WARNING_LABEL = {
   screen: (nick) => `${nick} não está conseguindo ver sua tela.`,
@@ -19,6 +20,7 @@ const STREAM_WARNING_LABEL = {
 };
 
 export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) {
+  const isPermanentRoom = isPermanentRoomName(roomCode);
   const clientRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [selfId, setSelfId] = useState(null);
@@ -437,6 +439,7 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
           </div>
 
           <Dock
+            isPermanentRoom={isPermanentRoom}
             micOn={micOn}
             camOn={camOn}
             screenOn={screenOn}

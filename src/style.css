@@ -1152,6 +1152,18 @@ input:focus {
   box-shadow: 0 4px 14px rgba(74, 125, 255, 0.4);
 }
 
+.dock-btn:disabled {
+  cursor: default;
+}
+
+.dock-btn:disabled:hover {
+  background: var(--surface-2);
+}
+
+.dock-btn.active:disabled:hover {
+  background: var(--accent-gradient);
+}
+
 .dock-desktop-only,
 .dock-mobile-only {
   display: inline-flex;

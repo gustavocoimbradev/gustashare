@@ -21,6 +21,7 @@ export default function Dock({
   isHost,
   isPublic,
   onTogglePublic,
+  isPermanentRoom,
 }) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [gamesOpen, setGamesOpen] = useState(false);
@@ -75,11 +76,20 @@ export default function Dock({
         </Tooltip>
 
         {isHost && (
-          <Tooltip label={isPublic ? 'Tornar sala privada' : 'Tornar sala pública'}>
+          <Tooltip
+            label={
+              isPermanentRoom
+                ? 'Sala permanente — sempre pública'
+                : isPublic
+                ? 'Tornar sala privada'
+                : 'Tornar sala pública'
+            }
+          >
             <button
               type="button"
               className={`dock-btn ${isPublic ? 'active' : ''}`}
               onClick={onTogglePublic}
+              disabled={isPermanentRoom}
             >
               {isPublic ? <Globe size={20} /> : <Lock size={20} />}
             </button>

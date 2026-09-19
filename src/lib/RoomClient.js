@@ -1,6 +1,7 @@
 import Peer from 'peerjs';
 import { isDesktop } from './platform.js';
 import { resolveIceServers, buildPeerOptions, prepareScreenTrack, tuneScreenSender, screenBitrateForViewers } from './webrtc.js';
+import { isPermanentRoomName } from './permanentRooms.js';
 
 const HOST_PREFIX = 'gsh1_';
 
@@ -134,6 +135,10 @@ export default class RoomClient extends EventTarget {
         this.roster = [this._selfMember()];
         this.emit('roster', this.roster);
         this.emit('host-info', this.hostPeerId);
+        // Salas permanentes (Valorant, Gartic, etc.) já são públicas por
+        // definição — sem isso, a contagem de gente na listagem da home só
+        // atualizava se o host lembrasse de clicar em "tornar pública".
+        if (isPermanentRoomName(this.roomCode)) this.setPublic(true);
         resolve();
       };
 
@@ -305,13 +310,22 @@ export default class RoomClient extends EventTarget {
   _onHostData(conn, data) {
     this._lastSeen.set(conn.peer, Date.now());
     if (data.type === 'hello') {
+      // O membro reenvia "hello" até ver a si mesmo no roster que o host
+      // devolve — e em algumas conexões o evento "open" do canal de dados
+      // dispara mais de uma vez, então esse "hello" pode chegar repetido
+      // pro mesmo peer. Só trata como entrada nova (evento pro resto da
+      // sala + reenvio de mídia) na primeira vez; nas seguintes só
+      // atualiza a conexão/roster, sem duplicar "entrou na sala".
+      const isNewMember = !this.memberConns.has(conn.peer) || !this.roster.some((m) => m.id === conn.peer);
       this.memberConns.set(conn.peer, conn);
       this.roster = this.roster.filter((m) => m.id !== conn.peer);
       this.roster.push(this._member(conn.peer, data.nickname, data.platform));
-      this._callPeerWithActiveStreams(conn.peer);
       this._broadcastRoster();
       this.emit('roster', this.roster);
-      this.emit('peer-joined', this._member(conn.peer, data.nickname, data.platform));
+      if (isNewMember) {
+        this._callPeerWithActiveStreams(conn.peer);
+        this.emit('peer-joined', this._member(conn.peer, data.nickname, data.platform));
+      }
     } else if (data.type === 'media-ready') {
       this._onPeerMediaReady(conn.peer);
     } else if (data.type === 'bye') {
@@ -336,13 +350,19 @@ export default class RoomClient extends EventTarget {
     this._lastSeen.delete(peerId);
     this.cameraPositions.delete(peerId);
     this._closeCallsWith(peerId);
+    // Precisa vir ANTES de fechar a conexão: `conn.close()` pode disparar
+    // o próprio evento 'close' de volta de forma reentrante (síncrona),
+    // chamando `_onMemberLeft` de novo pro mesmo peer antes desta chamada
+    // terminar. Guardando quem saiu e já tirando do roster antes evita
+    // que essa segunda chamada, ao rodar, não ache mais ninguém e caia no
+    // fallback sem nome ("Alguém saiu da sala" duplicado).
+    const left = this.roster.find((m) => m.id === peerId) || { id: peerId };
+    this.roster = this.roster.filter((m) => m.id !== peerId);
     try {
       conn?.close();
     } catch {
       // já fechou
     }
-    const left = this.roster.find((m) => m.id === peerId) || { id: peerId };
-    this.roster = this.roster.filter((m) => m.id !== peerId);
     this._broadcastRoster();
     this.emit('roster', this.roster);
     this.emit('peer-left', left);
@@ -722,6 +742,7 @@ export default class RoomClient extends EventTarget {
       this.roster = [this._selfMember(), ...othersFromPreviousRoster];
       this._setupHostPeer();
       this.emit('roster', this.roster);
+      if (isPermanentRoomName(this.roomCode)) this.setPublic(true);
       // Viramos host com um Peer novo (id fixo, mas objeto recriado) — as
       // chamadas de mídia diretas que tínhamos com os demais membros, de
       // quando éramos um membro comum, morreram junto. Reestabelece.
@@ -865,6 +886,9 @@ export default class RoomClient extends EventTarget {
 
   setPublic(isPublic) {
     if (!this.isHost) return;
+    // Sala permanente é pública por definição — não pode virar privada
+    // (nem clicando no botão, nem por qualquer outra chamada a isso).
+    if (!isPublic && isPermanentRoomName(this.roomCode)) return;
     this.isPublic = isPublic;
     this.emit('public-toggle', this.isPublic);
     if (isPublic) {
