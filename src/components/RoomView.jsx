@@ -5,12 +5,18 @@ import Chat from './Chat.jsx';
 import ScreenPickerModal from './ScreenPickerModal.jsx';
 import ParticipantsSidebar from './ParticipantsSidebar.jsx';
 import Dock from './Dock.jsx';
-import { LogOut } from 'lucide-react';
+import { LogOut, AlertTriangle, X as CloseIcon } from 'lucide-react';
 import TitleBar from './TitleBar.jsx';
 import { playJoinSound, playLeaveSound, playChatSound, playMediaOnSound, playMicOnSound, playMicOffSound } from '../lib/sounds.js';
 import { captureWindowNative } from '../lib/nativeCapture.js';
 import { SCREEN_DISPLAY_MEDIA } from '../lib/webrtc.js';
 import { isDesktop } from '../lib/platform.js';
+
+const STREAM_WARNING_LABEL = {
+  screen: (nick) => `${nick} não está conseguindo ver sua tela.`,
+  cam: (nick) => `${nick} não está conseguindo ver sua câmera.`,
+  mic: (nick) => `${nick} não está conseguindo ouvir seu áudio.`,
+};
 
 export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) {
   const clientRef = useRef(null);
@@ -29,6 +35,7 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
   const [screenSources, setScreenSources] = useState(null);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState(null);
+  const [streamWarnings, setStreamWarnings] = useState({}); // `${peerId}:${type}` -> { peerId, type }
   const nativeCaptureRef = useRef(null);
 
   useEffect(() => {
@@ -80,6 +87,13 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
         return next;
       });
       setRoster((prev) => prev.filter((m) => m.id !== peerId));
+      setStreamWarnings((prev) => {
+        const next = { ...prev };
+        for (const key of Object.keys(next)) {
+          if (key.startsWith(`${peerId}:`)) delete next[key];
+        }
+        return next;
+      });
       if (!peerId || peerId === client.peer?.id) return;
       setMessages((prev) => [
         ...prev,
@@ -102,6 +116,20 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
         playChatSound();
       }
     };
+    const onStreamFailed = (e) => {
+      const { peerId, type } = e.detail;
+      setStreamWarnings((prev) => ({ ...prev, [`${peerId}:${type}`]: { peerId, type } }));
+    };
+    const onStreamRecovered = (e) => {
+      const { peerId, type } = e.detail;
+      setStreamWarnings((prev) => {
+        const key = `${peerId}:${type}`;
+        if (!(key in prev)) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    };
 
     client.addEventListener('roster', onRoster);
     client.addEventListener('stream', onStream);
@@ -110,6 +138,8 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
     client.addEventListener('peer-left', onPeerLeft);
     client.addEventListener('self-stream', onSelfStream);
     client.addEventListener('chat', onChat);
+    client.addEventListener('stream-failed', onStreamFailed);
+    client.addEventListener('stream-recovered', onStreamRecovered);
 
     const onPublicToggle = (e) => setIsPublic(e.detail);
     client.addEventListener('public-toggle', onPublicToggle);
@@ -133,6 +163,8 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
       client.removeEventListener('peer-left', onPeerLeft);
       client.removeEventListener('self-stream', onSelfStream);
       client.removeEventListener('chat', onChat);
+      client.removeEventListener('stream-failed', onStreamFailed);
+      client.removeEventListener('stream-recovered', onStreamRecovered);
       client.removeEventListener('public-toggle', onPublicToggle);
       client.removeEventListener('host-info', onHostInfo);
       client.leave();
@@ -288,6 +320,15 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
     setMobilePanel((current) => (current === name ? null : name));
   }
 
+  function dismissStreamWarning(key) {
+    setStreamWarnings((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
   function confirmLeave() {
     nativeCaptureRef.current?.stop();
     nativeCaptureRef.current = null;
@@ -358,6 +399,23 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
         />
 
         <div className="grid-wrap">
+          {Object.keys(streamWarnings).length > 0 && (
+            <div className="stream-warnings">
+              {Object.entries(streamWarnings).map(([key, w]) => {
+                const member = roster.find((m) => m.id === w.peerId);
+                const label = STREAM_WARNING_LABEL[w.type];
+                return (
+                  <div key={key} className="stream-warning">
+                    <AlertTriangle size={16} />
+                    <span>{label ? label(member?.nickname || 'Alguém') : 'Algo deu errado com sua transmissão pra alguém na sala.'}</span>
+                    <button type="button" onClick={() => dismissStreamWarning(key)} aria-label="Dispensar aviso">
+                      <CloseIcon size={14} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <div className="grid">
             {roster.map((m) => {
               const isSelf = m.id === selfId;

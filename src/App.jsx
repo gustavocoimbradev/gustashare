@@ -3,9 +3,11 @@ import Home from './components/Home.jsx';
 import RoomView from './components/RoomView.jsx';
 import SoundsPage from './components/SoundsPage.jsx';
 import UpdateOverlay from './components/UpdateOverlay.jsx';
+import AlreadyOpenScreen from './components/AlreadyOpenScreen.jsx';
 import { saveSession, loadSession } from './lib/storage.js';
 import { parseInviteFromUrl, setRoomUrl, clearRoomUrl, isDesktop } from './lib/platform.js';
 import { seoHome, seoRoom } from './lib/seo.js';
+import { useSingleInstance } from './lib/singleInstance.js';
 
 // Rota de debug pra ouvir/ajustar os efeitos sonoros (ver SoundsPage). Só
 // existe no web — no desktop o Electron carrega direto de file://, sem
@@ -24,6 +26,10 @@ function sessionFromUrl() {
 export default function App() {
   const [session, setSession] = useState(sessionFromUrl);
   const [invite, setInvite] = useState(() => parseInviteFromUrl());
+  // No desktop o Electron já bloqueia segunda instância no nível do SO
+  // (app.requestSingleInstanceLock); aqui é só pra evitar duas abas do
+  // navegador abertas ao mesmo tempo.
+  const blocked = useSingleInstance(!isDesktop);
 
   useEffect(() => {
     if (!window.gustashare?.onDeepLink) return undefined;
@@ -47,6 +53,10 @@ export default function App() {
     }
     seoHome();
   }, [session, invite]);
+
+  if (blocked) {
+    return <AlreadyOpenScreen />;
+  }
 
   if (isSoundsRoute) {
     return <SoundsPage onBack={() => window.location.assign('/')} />;

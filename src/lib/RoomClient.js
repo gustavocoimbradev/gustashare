@@ -556,6 +556,11 @@ export default class RoomClient extends EventTarget {
     });
   }
 
+  // Quantas vezes tenta de novo (0-indexado) antes de desistir e avisar
+  // quem está compartilhando que aquele espectador específico não está
+  // recebendo a mídia — ver `stream-failed` em RoomView.
+  static MAX_CALL_ATTEMPTS = 5;
+
   _callPeer(peerId, type, stream, attempt = 0) {
     if (this.stopped || !this.peer || peerId === this.peer.id) return;
     if (!stream || stream.getTracks().every((t) => t.readyState === 'ended')) return;
@@ -574,8 +579,10 @@ export default class RoomClient extends EventTarget {
     if (type === 'screen') prepareScreenTrack(stream);
     const call = this.peer.call(peerId, stream, { metadata: { type } });
     if (!call) {
-      if (attempt < 3) {
+      if (attempt < RoomClient.MAX_CALL_ATTEMPTS) {
         setTimeout(() => this._callPeer(peerId, type, this.localStreams[type], attempt + 1), 700);
+      } else {
+        this._giveUpOnCall(peerId, type);
       }
       return;
     }
@@ -584,8 +591,10 @@ export default class RoomClient extends EventTarget {
     call.on('error', () => {
       if (this.outgoingCalls.get(key) !== call) return;
       this.outgoingCalls.delete(key);
-      if (attempt < 3 && this.localStreams[type]) {
+      if (attempt < RoomClient.MAX_CALL_ATTEMPTS && this.localStreams[type]) {
         setTimeout(() => this._callPeer(peerId, type, this.localStreams[type], attempt + 1), 800);
+      } else {
+        this._giveUpOnCall(peerId, type);
       }
     });
     this._watchCallHealth(call, key, peerId, type, attempt);
@@ -595,6 +604,13 @@ export default class RoomClient extends EventTarget {
         if (this.outgoingCalls.get(key) === call) this._retuneScreenCalls();
       }, 500);
     }
+  }
+
+  // Avisa quem está compartilhando (via evento, a UI decide como mostrar)
+  // que um espectador específico não está recebendo aquela mídia — em vez
+  // de deixar a UI parecer que deu tudo certo quando não deu.
+  _giveUpOnCall(peerId, type) {
+    this.emit('stream-failed', { peerId, type });
   }
 
   // Mesh puro sem TURN/SFU: compartilhar tela sobe uma cópia do vídeo pra
@@ -628,11 +644,18 @@ export default class RoomClient extends EventTarget {
       if (this.outgoingCalls.get(key) !== call) return;
       const pc = call.peerConnection;
       if (!pc) return;
-      let retried = false;
+      let settled = false;
+      const onConnected = () => {
+        if (settled || this.stopped) return;
+        if (pc.connectionState !== 'connected') return;
+        // Não trava esse listener: uma conexão "connected" pode cair de
+        // novo depois (rede instável) e precisamos saber disso também.
+        this.emit('stream-recovered', { peerId, type });
+      };
       const retry = () => {
-        if (retried || this.stopped) return;
+        if (settled || this.stopped) return;
         if (pc.connectionState !== 'failed' && pc.iceConnectionState !== 'failed') return;
-        retried = true;
+        settled = true;
         if (this.outgoingCalls.get(key) !== call) return;
         this.outgoingCalls.delete(key);
         try {
@@ -640,12 +663,15 @@ export default class RoomClient extends EventTarget {
         } catch {
           // ignore
         }
-        if (attempt < 5 && this.localStreams[type]) {
+        if (attempt < RoomClient.MAX_CALL_ATTEMPTS && this.localStreams[type]) {
           this._callPeer(peerId, type, this.localStreams[type], attempt + 1);
+        } else {
+          this._giveUpOnCall(peerId, type);
         }
       };
       pc.addEventListener('connectionstatechange', retry);
       pc.addEventListener('iceconnectionstatechange', retry);
+      pc.addEventListener('connectionstatechange', onConnected);
     }, 150);
   }
 

@@ -192,6 +192,46 @@ input:focus {
   min-height: 0;
 }
 
+.already-open {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(124, 107, 251, 0.18), transparent 55%),
+    radial-gradient(circle at 75% 80%, rgba(74, 125, 255, 0.14), transparent 55%),
+    var(--bg);
+}
+
+.already-open-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 360px;
+  padding: 40px 32px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  color: var(--text-dim);
+}
+
+.already-open-box h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.already-open-box p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .home-box {
   display: flex;
   align-items: stretch;
@@ -689,6 +729,58 @@ input:focus {
   flex: 1;
   display: flex;
   min-width: 0;
+}
+
+.stream-warnings {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(420px, calc(100% - 28px));
+}
+
+.stream-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  background: #3a2412;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: var(--radius-sm);
+  color: #fbbf24;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.stream-warning svg:first-child {
+  flex-shrink: 0;
+}
+
+.stream-warning span {
+  flex: 1;
+  color: #fde8b8;
+}
+
+.stream-warning button {
+  flex-shrink: 0;
+  padding: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: #fbbf24;
+}
+
+.stream-warning button:hover {
+  background: rgba(251, 191, 36, 0.15);
 }
 
 .grid {

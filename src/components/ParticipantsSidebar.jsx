@@ -60,7 +60,7 @@ export default function ParticipantsSidebar({
     <div className={`participants ${className || ''}`}>
       <div className="participants-section">
         <div className="participants-title">
-          Na sala — {roster.length}
+          Nesta sala ({roster.length})
           <button type="button" className="sheet-close" onClick={onClose} aria-label="Fechar">
             <X size={18} />
           </button>
@@ -85,7 +85,7 @@ export default function ParticipantsSidebar({
       </div>
 
       <div className="room-switch-section">
-        <div className="participants-title">Salas</div>
+        <div className="participants-title">Outras salas</div>
         <div className="room-switch-list">
           {rooms.map((room) => {
             const isCurrent = room.roomCode === currentRoomCode;
