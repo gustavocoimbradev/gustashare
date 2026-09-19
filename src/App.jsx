@@ -70,6 +70,10 @@ export default function App() {
             setInvite(null);
             setSession(null);
           }}
+          onSwitchRoom={(roomCode) => {
+            saveSession(session.nickname, roomCode);
+            setSession({ nickname: session.nickname, roomCode });
+          }}
         />
       )}
     </>

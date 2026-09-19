@@ -1,29 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Download, X } from 'lucide-react';
 import { saveSession, loadSession } from '../lib/storage.js';
-import { PublicRoomsRegistry } from '../lib/RoomClient.js';
 import { isDesktop, DESKTOP_DOWNLOAD_URL } from '../lib/platform.js';
+import { loadPublicRooms } from '../lib/publicRooms.js';
 import TitleBar from './TitleBar.jsx';
 import RoomIcon from './RoomIcon.jsx';
-
-const PERMANENT_ROOMS = [
-  'Vídeos de Terror',
-  'Gameplay',
-  'Valorant',
-  'League of Legends',
-  'Xracing',
-  'Codenames',
-  'StopotS',
-  'Gartic',
-  'Gartic Phone',
-  'Argumento',
-  'Conversa Fiada',
-  'Programação',
-  'Estudos',
-  'Música',
-  'Filminho',
-  'Networking',
-];
 
 export default function Home({ onJoin, invite }) {
   const saved = loadSession();
@@ -43,21 +24,7 @@ export default function Home({ onJoin, invite }) {
       setRoomCode(saved.roomCode);
     }
 
-    PublicRoomsRegistry.cleanup();
-    const dynamicRooms = Object.values(PublicRoomsRegistry.getAll());
-    const dynamicCodes = new Set(dynamicRooms.map((r) => r.roomCode));
-    const permanentRooms = PERMANENT_ROOMS.filter((name) => !dynamicCodes.has(name)).map((name) => ({
-      roomCode: name,
-      hostName: '',
-      participantCount: 0,
-      createdAt: 0,
-    }));
-    // Salas mais cheias aparecem primeiro; o sort é estável, então em caso
-    // de empate mantém a ordem de criação (dinâmicas) / a ordem da lista (permanentes).
-    const merged = [...dynamicRooms, ...permanentRooms].sort(
-      (a, b) => b.participantCount - a.participantCount
-    );
-    setPublicRooms(merged);
+    setPublicRooms(loadPublicRooms());
   }, [invite]);
 
   function submit(e) {

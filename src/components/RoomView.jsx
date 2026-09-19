@@ -12,7 +12,7 @@ import { captureWindowNative } from '../lib/nativeCapture.js';
 import { SCREEN_DISPLAY_MEDIA } from '../lib/webrtc.js';
 import { isDesktop } from '../lib/platform.js';
 
-export default function RoomView({ nickname, roomCode, onLeave }) {
+export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) {
   const clientRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [selfId, setSelfId] = useState(null);
@@ -353,6 +353,8 @@ export default function RoomView({ nickname, roomCode, onLeave }) {
           streams={streams}
           selfStreams={selfStreams}
           hostId={hostId}
+          currentRoomCode={roomCode}
+          onSwitchRoom={onSwitchRoom}
         />
 
         <div className="grid-wrap">
