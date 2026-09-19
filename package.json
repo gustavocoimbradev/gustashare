@@ -14,7 +14,8 @@
     "build-local": "vite build && electron-builder --win nsis --publish never -c.directories.output=.",
     "bump-version": "node scripts/bump-version.js",
     "sync-update-server": "node scripts/sync-update-server.js",
-    "publish": "git add . && git pull && git commit -m \"publish\" && git push"
+    "deploy-worker": "cd cloudflare-worker && npx wrangler deploy",
+    "publish": "git add . && git pull && git commit -m \"publish\" && git push && npm run deploy-worker"
   },
   "dependencies": {
     "lucide-react": "^1.47.0",

@@ -1,0 +1,7 @@
+name = "gustashare-turn"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# TURN_KEY_ID e TURN_API_TOKEN NÃO vão aqui — são segredos, configurados via:
+#   wrangler secret put TURN_KEY_ID
+#   wrangler secret put TURN_API_TOKEN

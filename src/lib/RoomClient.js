@@ -1,6 +1,6 @@
 import Peer from 'peerjs';
 import { isDesktop } from './platform.js';
-import { PEER_OPTIONS, prepareScreenTrack, tuneScreenSender, screenBitrateForViewers } from './webrtc.js';
+import { resolveIceServers, buildPeerOptions, prepareScreenTrack, tuneScreenSender, screenBitrateForViewers } from './webrtc.js';
 
 const HOST_PREFIX = 'gsh1_';
 
@@ -89,14 +89,19 @@ export default class RoomClient extends EventTarget {
     this._lastSeen = new Map();
     this._heartbeatTimer = null;
     this._pageLeaveHandler = null;
+    this.peerOptions = null;
   }
 
   emit(name, detail) {
     this.dispatchEvent(new CustomEvent(name, { detail }));
   }
 
-  start() {
+  async start() {
     this._bindPageLeave();
+    // Resolvido uma vez por sessão (não por tentativa de conexão) — as
+    // credenciais TURN duram horas, não precisa buscar de novo a cada
+    // reconexão/reeleição de host dentro da mesma sessão.
+    this.peerOptions = buildPeerOptions(await resolveIceServers());
     return this._becomeHostOrJoin();
   }
 
@@ -116,7 +121,7 @@ export default class RoomClient extends EventTarget {
 
   _becomeHostOrJoin() {
     return new Promise((resolve) => {
-      const hostPeer = new Peer(this.hostId, PEER_OPTIONS);
+      const hostPeer = new Peer(this.hostId, this.peerOptions);
       let settled = false;
 
       const settleHost = () => {
@@ -165,7 +170,7 @@ export default class RoomClient extends EventTarget {
 
   _joinAsMember() {
     return new Promise((resolve) => {
-      const peer = new Peer(PEER_OPTIONS);
+      const peer = new Peer(this.peerOptions);
       let opened = false;
       peer.on('open', () => {
         if (this.stopped) {
@@ -703,7 +708,7 @@ export default class RoomClient extends EventTarget {
     } catch {
       // ignore
     }
-    const hostPeer = new Peer(this.hostId, PEER_OPTIONS);
+    const hostPeer = new Peer(this.hostId, this.peerOptions);
     hostPeer.on('open', () => {
       if (this.stopped) {
         hostPeer.destroy();
@@ -745,7 +750,7 @@ export default class RoomClient extends EventTarget {
     } catch {
       // ignore
     }
-    const peer = previousId ? new Peer(previousId, PEER_OPTIONS) : new Peer(PEER_OPTIONS);
+    const peer = previousId ? new Peer(previousId, this.peerOptions) : new Peer(this.peerOptions);
     peer.on('open', () => {
       if (this.stopped) {
         peer.destroy();

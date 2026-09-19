@@ -2,27 +2,81 @@
 // preferência por não derrubar resolução quando a rede oscila.
 // Não precisa de Firebase/Vercel/Cloudflare pra mídia — o WebRTC já é P2P.
 
-// IMPORTANTE: falta um servidor TURN (relay) aqui — ver nota grande no
-// final deste arquivo sobre por que isso é a causa mais provável do
-// compartilhamento falhar "pra uns sim, pra outros não".
-export const PEER_OPTIONS = {
-  config: {
-    iceServers: [
-      // Vários STUNs de provedores diferentes — sem TURN, isso é o que temos
-      // pra descobrir o candidato público. Não ajuda contra NAT simétrico,
-      // mas cobre o caso de um provedor específico estar bloqueado/instável
-      // numa rede sem derrubar a tentativa inteira.
-      { urls: 'stun:stun.cloudflare.com:3478' },
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun.services.mozilla.com' },
-    ],
-    // Junta candidatos antes de precisar deles — conecta mais rápido,
-    // principalmente em reconexões onde cada milissegundo de handshake
-    // conta pro usuário não perceber a queda.
-    iceCandidatePoolSize: 4,
+// STUNs de provedores diferentes — ajudam a descobrir o candidato público;
+// cobre o caso de um provedor específico estar bloqueado/instável numa
+// rede sem derrubar a tentativa inteira.
+const STUN_SERVERS = [
+  { urls: 'stun:stun.cloudflare.com:3478' },
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun.services.mozilla.com' },
+  { urls: 'stun:stun.relay.metered.ca:80' },
+];
+
+// TURN (relay) estático via Metered — plano free, 20GB/mês. Usado como
+// FALLBACK caso o Worker do Cloudflare (mais cota, ver abaixo) esteja fora
+// do ar ou ainda não tenha sido configurado. Usado só quando a conexão
+// direta não fecha — a maioria dos casos continua P2P puro, sem passar
+// por aqui.
+const METERED_TURN_SERVERS = [
+  {
+    urls: 'turn:standard.relay.metered.ca:80',
+    username: '25e728d03219114eb23ae4f6',
+    credential: 'BRVlcIt0D/gnMU+D',
   },
-};
+  {
+    urls: 'turn:standard.relay.metered.ca:80?transport=tcp',
+    username: '25e728d03219114eb23ae4f6',
+    credential: 'BRVlcIt0D/gnMU+D',
+  },
+  {
+    urls: 'turn:standard.relay.metered.ca:443',
+    username: '25e728d03219114eb23ae4f6',
+    credential: 'BRVlcIt0D/gnMU+D',
+  },
+  {
+    urls: 'turns:standard.relay.metered.ca:443?transport=tcp',
+    username: '25e728d03219114eb23ae4f6',
+    credential: 'BRVlcIt0D/gnMU+D',
+  },
+];
+
+// URL do Cloudflare Worker que gera credenciais TURN de curta duração (ver
+// cloudflare-worker/worker.js). Fica null até o deploy acontecer e a URL
+// real ser configurada — enquanto isso, `resolveIceServers` usa só STUN +
+// o TURN estático da Metered acima.
+const TURN_WORKER_URL = 'https://gustashare-turn.whoisgustavolima.workers.dev';
+
+const FALLBACK_ICE_SERVERS = [...STUN_SERVERS, ...METERED_TURN_SERVERS];
+
+// Busca credenciais TURN "frescas" no Worker do Cloudflare (cota bem maior
+// que a da Metered). Se o Worker não estiver configurado, estiver fora do
+// ar, ou demorar demais, cai pro STUN + TURN estático da Metered — nunca
+// deixa a sala sem NENHUM caminho de conexão só por causa disso.
+export async function resolveIceServers() {
+  if (!TURN_WORKER_URL) return FALLBACK_ICE_SERVERS;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(TURN_WORKER_URL, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) return FALLBACK_ICE_SERVERS;
+    const data = await res.json();
+    if (Array.isArray(data.iceServers) && data.iceServers.length) {
+      return [...STUN_SERVERS, ...data.iceServers];
+    }
+    return FALLBACK_ICE_SERVERS;
+  } catch {
+    return FALLBACK_ICE_SERVERS;
+  }
+}
+
+// Junta candidatos antes de precisar deles — conecta mais rápido,
+// principalmente em reconexões onde cada milissegundo de handshake conta
+// pro usuário não perceber a queda.
+export function buildPeerOptions(iceServers) {
+  return { config: { iceServers, iceCandidatePoolSize: 4 } };
+}
 
 export const SCREEN_DISPLAY_MEDIA = {
   video: {
@@ -97,28 +151,25 @@ export async function tuneScreenSender(call, maxBitrate = SCREEN_BANDWIDTH_BUDGE
 
 // ----- Sobre o "compartilho e um vê, outro não" -----
 //
-// Isso é o sintoma clássico de mesh P2P só com STUN: STUN descobre o
+// Isso era o sintoma clássico de mesh P2P só com STUN: STUN descobre o
 // endereço público de cada lado, mas só funciona quando pelo menos um dos
 // dois está atrás de um NAT "bem comportado". Contra NAT simétrico ou
 // CGNAT — muito comum em rede móvel/4G e em vários provedores residenciais
-// no Brasil — os dois lados descobrem endereços que não servem pra nada,
-// a conexão direta nunca fecha, e o RTCPeerConnection fica preso em
+// no Brasil — os dois lados descobriam endereços que não serviam pra nada,
+// a conexão direta nunca fechava, e o RTCPeerConnection ficava preso em
 // "connecting"/"failed" pra sempre. Como cada par de pessoas na sala tem
-// uma rede diferente, dá exatamente essa sensação de loteria: funciona
-// pra quem tem NAT tranquilo, falha pra quem não tem — e o retry (que já
-// existe em RoomClient) não resolve porque o problema não é transitório,
-// é estrutural.
+// uma rede diferente, dava exatamente essa sensação de loteria: funcionava
+// pra quem tinha NAT tranquilo, falhava pra quem não tinha — e o retry
+// (que já existe em RoomClient) não resolvia porque o problema não era
+// transitório, era estrutural.
 //
-// O único jeito de cobrir 100% dos casos é ter um servidor TURN (relay):
-// quando a rota direta não fecha, os dois lados mandam a mídia através
-// dele em vez de tentar se achar direto. Não dá pra "adivinhar"
-// credenciais de TURN de forma confiável/segura aqui — precisa de uma
-// conta (grátis em vários provedores) em um serviço como Metered.ca,
-// Cloudflare Calls, Twilio ou Xirsys, ou rodar seu próprio coturn. Com as
-// credenciais em mãos, adiciona um item em `iceServers` acima assim:
-//   { urls: 'turn:SEU_HOST:PORTA', username: '...', credential: '...' }
+// O TURN acima (Metered, plano free — 20GB/mês) cobre isso: quando a rota
+// direta não fecha, os dois lados retransmitem a mídia por ele em vez de
+// falhar. Se algum dia estourar a cota de 20GB/mês, a chamada volta a
+// falhar só pra quem realmente precisava de relay (o resto continua P2P
+// puro normalmente) — vale ficar de olho no painel da Metered.
 //
-// Enquanto isso, RoomClient agora pelo menos AVISA quem está
-// compartilhando quando a conexão com um espectador específico falha de
-// vez (evento `stream-failed`), em vez de deixar parecer que deu tudo
-// certo.
+// Ainda assim, RoomClient avisa quem está compartilhando quando a conexão
+// com um espectador específico falha de vez, mesmo com TURN (evento
+// `stream-failed`) — rede muito ruim dos dois lados ainda pode acontecer,
+// e aí é melhor avisar do que deixar parecer que deu tudo certo.
