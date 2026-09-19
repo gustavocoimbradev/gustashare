@@ -72,23 +72,23 @@ function click(ctx, { start, duration, peakGain, filterFrom, filterTo, filterTyp
 
 // ----- Nível 1: rotina, toca o tempo todo — precisa ser curto e discreto -----
 
-// "Ding" de mensagem bem discreto: dois harmônicos em seno tocando quase juntos.
+// Um "tap" só, abafado (filtro fechando + pitch caindo de leve) — nada de
+// duas notas subindo em sequência, que soa a moeda de jogo 8-bit.
 export function playChatSound() {
   const ctx = getAudioContext();
-  tone(ctx, { type: 'sine', freqFrom: 1318.5, start: 0, duration: 0.05, peakGain: 0.04 });
-  tone(ctx, { type: 'sine', freqFrom: 1760, start: 0.04, duration: 0.08, peakGain: 0.035 });
+  tone(ctx, { type: 'triangle', freqFrom: 620, freqTo: 480, start: 0, duration: 0.09, peakGain: 0.11, filterFrom: 2600, filterTo: 900 });
 }
 
 // Tick suave subindo: mic ligou.
 export function playMicOnSound() {
   const ctx = getAudioContext();
-  tone(ctx, { type: 'sine', freqFrom: 700, freqTo: 1000, start: 0, duration: 0.08, peakGain: 0.045 });
+  tone(ctx, { type: 'sine', freqFrom: 700, freqTo: 1000, start: 0, duration: 0.08, peakGain: 0.1 });
 }
 
 // Mesma textura do de ligar, só que descendo — bem sutil, sem clique mecânico.
 export function playMicOffSound() {
   const ctx = getAudioContext();
-  tone(ctx, { type: 'sine', freqFrom: 700, freqTo: 420, start: 0, duration: 0.09, peakGain: 0.04 });
+  tone(ctx, { type: 'sine', freqFrom: 700, freqTo: 420, start: 0, duration: 0.09, peakGain: 0.1 });
 }
 
 // ----- Nível 2: alguém entrou/saiu — acontecimento social, merece acorde -----
@@ -97,38 +97,32 @@ export function playMicOffSound() {
 // discreto que o de compartilhar tela, pra não competir com ele.
 export function playJoinSound() {
   const ctx = getAudioContext();
-  tone(ctx, { type: 'sine', freqFrom: 587.33, start: 0, duration: 0.08, peakGain: 0.045 });
-  tone(ctx, { type: 'sine', freqFrom: 880, start: 0.075, duration: 0.12, peakGain: 0.05 });
+  tone(ctx, { type: 'sine', freqFrom: 587.33, start: 0, duration: 0.08, peakGain: 0.1 });
+  tone(ctx, { type: 'sine', freqFrom: 880, start: 0.075, duration: 0.12, peakGain: 0.11 });
 }
 
-// Bolha de sabão estourando (tipo Transformice) — bem sutil: um tom caindo
-// rápido (corpo da bolha) e um estalinho agudo no fim (o "pop").
+// Bolha de sabão estourando (tipo Transformice) — bem sutil: só o tom caindo rápido.
 export function playLeaveSound() {
   const ctx = getAudioContext();
-  tone(ctx, { type: 'sine', freqFrom: 900, freqTo: 340, start: 0, duration: 0.1, peakGain: 0.045 });
-  click(ctx, { start: 0.07, duration: 0.03, peakGain: 0.035, filterFrom: 3000, filterTo: 1200 });
+  tone(ctx, { type: 'sine', freqFrom: 900, freqTo: 340, start: 0, duration: 0.1, peakGain: 0.11 });
 }
 
 // ----- Nível 3: tela/câmera ligada — o evento mais importante da sala -----
 
 // Mini-fanfarra: um "sopro" grave subindo (riser, prepara a entrada) por
 // baixo de um arpejo de 4 notas em oitava, cada uma com camada destoada
-// por cima (coro/shimmer), fechando com um brilho agudo na última nota —
-// de propósito bem mais presente/"grande" que os outros dois níveis.
+// por cima (coro/shimmer) — de propósito bem mais presente/"grande" que
+// os outros dois níveis.
 export function playMediaOnSound() {
   const ctx = getAudioContext();
   click(ctx, { start: 0, duration: 0.3, peakGain: 0.035, filterFrom: 200, filterTo: 3200, filterType: 'lowpass' });
 
   const notes = [523.25, 659.25, 783.99, 1046.5];
-  let lastStart = 0;
   notes.forEach((freq, i) => {
     const start = i * 0.075;
     const duration = i === notes.length - 1 ? 0.34 : 0.16;
     const peak = i === notes.length - 1 ? 0.13 : 0.095;
-    lastStart = start;
     tone(ctx, { type: 'triangle', freqFrom: freq, start, duration, peakGain: peak });
     tone(ctx, { type: 'sine', freqFrom: freq, start, duration: duration + 0.05, peakGain: peak * 0.55, detune: 8 });
   });
-  // brilho final agudo, uma oitava acima da última nota — o "toque de acabamento".
-  tone(ctx, { type: 'sine', freqFrom: 2093, start: lastStart + 0.1, duration: 0.28, peakGain: 0.055, detune: -6 });
 }
