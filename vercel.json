@@ -31,6 +31,10 @@
     {
       "source": "/room/:code",
       "destination": "/index.html"
+    },
+    {
+      "source": "/sounds",
+      "destination": "/index.html"
     }
   ]
 }

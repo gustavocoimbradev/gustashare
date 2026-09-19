@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import Home from './components/Home.jsx';
 import RoomView from './components/RoomView.jsx';
+import SoundsPage from './components/SoundsPage.jsx';
 import UpdateOverlay from './components/UpdateOverlay.jsx';
 import { saveSession, loadSession } from './lib/storage.js';
-import { parseInviteFromUrl, setRoomUrl, clearRoomUrl } from './lib/platform.js';
+import { parseInviteFromUrl, setRoomUrl, clearRoomUrl, isDesktop } from './lib/platform.js';
 import { seoHome, seoRoom } from './lib/seo.js';
+
+// Rota de debug pra ouvir/ajustar os efeitos sonoros (ver SoundsPage). Só
+// existe no web — no desktop o Electron carrega direto de file://, sem
+// barra de endereço pra digitar isso.
+const isSoundsRoute = !isDesktop && typeof window !== 'undefined' && window.location.pathname === '/sounds';
 
 function sessionFromUrl() {
   const invite = parseInviteFromUrl();
@@ -41,6 +47,10 @@ export default function App() {
     }
     seoHome();
   }, [session, invite]);
+
+  if (isSoundsRoute) {
+    return <SoundsPage onBack={() => window.location.assign('/')} />;
+  }
 
   return (
     <>
