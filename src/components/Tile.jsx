@@ -7,7 +7,7 @@ import ClientBadge from './ClientBadge.jsx';
 import HostBadge from './HostBadge.jsx';
 import MicBadge from './MicBadge.jsx';
 
-function VolumeControl({ label, volume, silent, open, onToggleOpen, onChange }) {
+function VolumeControl({ label, volume, silent, open, onToggleOpen, onChange, compact }) {
   const VolumeIcon = silent ? VolumeX : volume < 0.4 ? Volume1 : Volume2;
   const sliderValue = silent ? 0 : volume;
   return (
@@ -15,14 +15,14 @@ function VolumeControl({ label, volume, silent, open, onToggleOpen, onChange }) 
       <Tooltip label={label}>
         <button
           type="button"
-          className={`tile-icon-btn tile-icon-btn-sm ${silent ? 'muted' : ''}`}
+          className={`tile-icon-btn ${compact ? 'tile-icon-btn-sm' : ''} ${silent ? 'muted' : ''}`}
           onClick={(e) => {
             e.stopPropagation();
             onToggleOpen();
           }}
           aria-label={label}
         >
-          <VolumeIcon size={12} />
+          <VolumeIcon size={compact ? 12 : 15} />
         </button>
       </Tooltip>
       {open && (
