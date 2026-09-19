@@ -1063,6 +1063,11 @@ input:focus {
   background: rgba(196, 69, 106, 0.22);
 }
 
+.tile-icon-btn-sm {
+  width: 22px;
+  height: 22px;
+}
+
 .tile-volume-wrap {
   position: relative;
   display: flex;

@@ -7,22 +7,22 @@ import ClientBadge from './ClientBadge.jsx';
 import HostBadge from './HostBadge.jsx';
 import MicBadge from './MicBadge.jsx';
 
-function VolumeControl({ label, mutedLabel, volume, silent, open, onToggleOpen, onChange }) {
+function VolumeControl({ label, volume, silent, open, onToggleOpen, onChange }) {
   const VolumeIcon = silent ? VolumeX : volume < 0.4 ? Volume1 : Volume2;
   const sliderValue = silent ? 0 : volume;
   return (
     <div className="tile-volume-wrap">
-      <Tooltip label={silent ? mutedLabel : label}>
+      <Tooltip label={label}>
         <button
           type="button"
-          className={`tile-icon-btn ${silent ? 'muted' : ''}`}
+          className={`tile-icon-btn tile-icon-btn-sm ${silent ? 'muted' : ''}`}
           onClick={(e) => {
             e.stopPropagation();
             onToggleOpen();
           }}
-          aria-label={silent ? mutedLabel : label}
+          aria-label={label}
         >
-          <VolumeIcon size={15} />
+          <VolumeIcon size={12} />
         </button>
       </Tooltip>
       {open && (
@@ -282,8 +282,7 @@ export default function Tile({
 
           {focused && !isSelf && (
             <VolumeControl
-              label="Silenciar transmissão"
-              mutedLabel="Ativar som da transmissão"
+              label="Volume transmissão"
               volume={streamVolume}
               silent={streamManualSilent}
               open={streamSliderOpen}
@@ -299,8 +298,7 @@ export default function Tile({
 
           {!isSelf && (
             <VolumeControl
-              label="Silenciar microfone"
-              mutedLabel="Ativar microfone"
+              label="Volume microfone"
               volume={micVolume}
               silent={micSilent}
               open={micSliderOpen}
