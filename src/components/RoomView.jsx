@@ -38,6 +38,7 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState(null);
   const [streamWarnings, setStreamWarnings] = useState({}); // `${peerId}:${type}` -> { peerId, type }
+  const [focusedId, setFocusedId] = useState(null);
   const nativeCaptureRef = useRef(null);
 
   useEffect(() => {
@@ -172,6 +173,12 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
       client.leave();
     };
   }, [nickname, roomCode]);
+
+  useEffect(() => {
+    if (!focusedId) return;
+    const s = focusedId === selfId ? selfStreams : streams[focusedId];
+    if (!s?.screen && !s?.cam) setFocusedId(null);
+  }, [focusedId, selfId, streams, selfStreams]);
 
   const toggleMic = useCallback(async () => {
     const next = !micOn;
@@ -418,25 +425,76 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
               })}
             </div>
           )}
-          <div className="grid">
-            {roster.map((m) => {
-              const isSelf = m.id === selfId;
-              const s = isSelf ? selfStreams : streams[m.id] || {};
-              return (
-                <Tile
-                  key={m.id}
-                  userId={m.id}
-                  nickname={m.nickname}
-                  isSelf={isSelf}
-                  isHost={m.id === hostId}
-                  platform={m.platform}
-                  screenStream={s.screen}
-                  camStream={s.cam}
-                  micStream={s.mic}
-                />
-              );
-            })}
-          </div>
+          {focusedId ? (
+            <div className="grid-focus-mode">
+              <div className="grid-focus-main">
+                {roster
+                  .filter((m) => m.id === focusedId)
+                  .map((m) => {
+                    const isSelf = m.id === selfId;
+                    const s = isSelf ? selfStreams : streams[m.id] || {};
+                    return (
+                      <Tile
+                        key={m.id}
+                        userId={m.id}
+                        nickname={m.nickname}
+                        isSelf={isSelf}
+                        isHost={m.id === hostId}
+                        platform={m.platform}
+                        screenStream={s.screen}
+                        camStream={s.cam}
+                        micStream={s.mic}
+                        focused
+                        onStopWatching={() => setFocusedId(null)}
+                      />
+                    );
+                  })}
+              </div>
+              <div className="grid-focus-strip">
+                {roster
+                  .filter((m) => m.id !== focusedId)
+                  .map((m) => {
+                    const isSelf = m.id === selfId;
+                    const s = isSelf ? selfStreams : streams[m.id] || {};
+                    return (
+                      <Tile
+                        key={m.id}
+                        userId={m.id}
+                        nickname={m.nickname}
+                        isSelf={isSelf}
+                        isHost={m.id === hostId}
+                        platform={m.platform}
+                        screenStream={s.screen}
+                        camStream={s.cam}
+                        micStream={s.mic}
+                        onFocus={() => setFocusedId(m.id)}
+                      />
+                    );
+                  })}
+              </div>
+            </div>
+          ) : (
+            <div className="grid">
+              {roster.map((m) => {
+                const isSelf = m.id === selfId;
+                const s = isSelf ? selfStreams : streams[m.id] || {};
+                return (
+                  <Tile
+                    key={m.id}
+                    userId={m.id}
+                    nickname={m.nickname}
+                    isSelf={isSelf}
+                    isHost={m.id === hostId}
+                    platform={m.platform}
+                    screenStream={s.screen}
+                    camStream={s.cam}
+                    micStream={s.mic}
+                    onFocus={() => setFocusedId(m.id)}
+                  />
+                );
+              })}
+            </div>
+          )}
 
           <Dock
             isPermanentRoom={isPermanentRoom}

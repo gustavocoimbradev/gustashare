@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Maximize2, Volume1, Volume2, VolumeX, X } from 'lucide-react';
+import { Maximize2, MonitorX, Volume1, Volume2, VolumeX, X } from 'lucide-react';
 import useSpeaking from '../lib/useSpeaking.js';
 import { userColorStyle } from '../lib/userColor.js';
 import Tooltip from './Tooltip.jsx';
@@ -7,7 +7,19 @@ import ClientBadge from './ClientBadge.jsx';
 import HostBadge from './HostBadge.jsx';
 import MicBadge from './MicBadge.jsx';
 
-export default function Tile({ nickname, isSelf, isHost, userId, platform, screenStream, camStream, micStream }) {
+export default function Tile({
+  nickname,
+  isSelf,
+  isHost,
+  userId,
+  platform,
+  screenStream,
+  camStream,
+  micStream,
+  focused = false,
+  onFocus,
+  onStopWatching,
+}) {
   const videoRef = useRef(null);
   const pipRef = useRef(null);
   const audioRef = useRef(null);
@@ -24,6 +36,10 @@ export default function Tile({ nickname, isSelf, isHost, userId, platform, scree
   const mainStream = screenStream || camStream;
   const showPip = !!screenStream && !!camStream;
   const silent = muted || volume === 0;
+  // Transmissão (áudio embutido no vídeo) só toca no card focado — evita que
+  // o som de quem começa a compartilhar tela estoure sem o usuário escolher.
+  // O mic (voz) da pessoa não é afetado por isso, só pelo "silent" manual.
+  const streamSilent = silent || !focused;
 
   useEffect(() => {
     setVideoReady(false);
@@ -57,16 +73,17 @@ export default function Tile({ nickname, isSelf, isHost, userId, platform, scree
   }, [micStream]);
 
   useEffect(() => {
-    const level = silent ? 0 : volume;
+    const micLevel = silent ? 0 : volume;
     if (audioRef.current) {
       audioRef.current.muted = isSelf || silent;
-      audioRef.current.volume = level;
+      audioRef.current.volume = micLevel;
     }
+    const streamLevel = streamSilent ? 0 : volume;
     if (videoRef.current) {
-      videoRef.current.muted = isSelf || silent;
-      videoRef.current.volume = level;
+      videoRef.current.muted = isSelf || streamSilent;
+      videoRef.current.volume = streamLevel;
     }
-  }, [volume, silent, isSelf]);
+  }, [volume, silent, streamSilent, isSelf]);
 
   useEffect(() => {
     function onFullscreenChange() {
@@ -109,6 +126,16 @@ export default function Tile({ nickname, isSelf, isHost, userId, platform, scree
     setExpanded(true);
   }
 
+  function handleStageClick() {
+    if (!mainStream || focused) return;
+    onFocus?.();
+  }
+
+  function stopWatching(e) {
+    e.stopPropagation();
+    onStopWatching?.();
+  }
+
   function exitExpanded() {
     setExpanded(false);
     if (document.fullscreenElement || document.webkitFullscreenElement) {
@@ -144,12 +171,16 @@ export default function Tile({ nickname, isSelf, isHost, userId, platform, scree
 
   return (
     <div
-      className={`tile ${speaking ? 'speaking' : ''} ${expanded ? 'expanded' : ''}`}
+      className={`tile ${speaking ? 'speaking' : ''} ${expanded ? 'expanded' : ''} ${focused ? 'focused' : ''}`}
       style={userColorStyle(userId)}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <div ref={stageRef} className={`tile-stage ${expanded ? 'expanded' : ''}`}>
+      <div
+        ref={stageRef}
+        className={`tile-stage ${expanded ? 'expanded' : ''} ${mainStream && !focused ? 'watchable' : ''}`}
+        onClick={handleStageClick}
+      >
         <div className="avatar">{nickname.slice(0, 2).toUpperCase()}</div>
         {mainStream ? (
           <video
@@ -157,7 +188,7 @@ export default function Tile({ nickname, isSelf, isHost, userId, platform, scree
             className={videoReady ? '' : 'is-pending'}
             autoPlay
             playsInline
-            muted={isSelf || silent}
+            muted={isSelf || streamSilent}
           />
         ) : null}
 
@@ -172,6 +203,13 @@ export default function Tile({ nickname, isSelf, isHost, userId, platform, scree
         {expanded && (
           <button type="button" className="tile-expanded-close" onClick={exitExpanded} aria-label="Sair da tela cheia">
             <X size={18} />
+          </button>
+        )}
+
+        {focused && !expanded && (
+          <button type="button" className="tile-stop-watching" onClick={stopWatching}>
+            <MonitorX size={15} />
+            Parar de assistir
           </button>
         )}
       </div>
