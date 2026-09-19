@@ -206,7 +206,7 @@ input:focus {
 .home-card {
   display: flex;
   flex-direction: column;
-  align-self: flex-start;
+  align-self: center;
   flex: 0 0 auto;
   gap: 14px;
   width: 100%;
@@ -319,9 +319,18 @@ input:focus {
 }
 
 @media (min-width: 861px) {
+  .home-box {
+    width: min(1060px, calc(100vw - 40px));
+  }
+
   .home-card {
-    width: 300px;
+    width: 320px;
+    flex: 0 0 320px;
     max-width: 100%;
+  }
+
+  .home-box:not(.with-rooms) {
+    width: auto;
   }
 
   .home-box:not(.with-rooms) .home-card {
@@ -330,43 +339,48 @@ input:focus {
   }
 
   .home-public-rooms {
-    width: 300px;
-    max-width: 100%;
+    flex: 1;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    padding: 34px 36px;
   }
 }
 
-.home-public-rooms h3 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
 .public-rooms-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  align-content: start;
+  gap: 10px;
   flex: 1;
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
+  padding-bottom: 2px;
+}
+
+@media (min-width: 861px) {
+  .public-rooms-list {
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 14px;
+  }
 }
 
 .public-room-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 10px;
   width: 100%;
   min-width: 0;
-  padding: 12px;
+  padding: 18px 12px;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
-  text-align: left;
+  text-align: center;
 }
 
 .public-room-card:hover {
@@ -374,14 +388,43 @@ input:focus {
   background: #2c303a;
 }
 
+.room-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--accent-gradient);
+  color: #fff;
+}
+
+.room-icon.room-icon-brand svg {
+  display: block;
+}
+
+.room-icon.room-icon-image {
+  background: #fff;
+  padding: 6px;
+}
+
+.room-icon.room-icon-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: calc(var(--radius-md) - 6px);
+}
+
 .room-info {
-  flex: 1;
+  width: 100%;
   min-width: 0;
 }
 
 .room-name {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -389,17 +432,22 @@ input:focus {
 }
 
 .room-host {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-dim);
   margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .room-count {
-  flex-shrink: 0;
-  margin-left: 12px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  color: var(--text);
+  color: var(--text-dim);
+}
+
+.room-count-active {
+  color: var(--accent-green);
 }
 
 .home-download:hover {
@@ -1693,6 +1741,48 @@ input:focus {
     max-height: 240px;
     padding: 20px 0 0;
     margin-top: 20px;
+  }
+
+  /* Cards compactos e horizontais no mobile: ícone + nome + pessoas numa
+     linha só, pra evitar cortar texto. */
+  .public-rooms-list {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .public-room-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: left;
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .public-room-card .room-icon {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+  }
+
+  .public-room-card .room-info {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+  }
+
+  .public-room-card .room-name {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .public-room-card .room-host {
+    display: none;
+  }
+
+  .public-room-card .room-count {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .home-card h1 {

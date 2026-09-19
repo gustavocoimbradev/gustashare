@@ -1,3 +1,5 @@
+import { roomUrlSlug } from './platform.js';
+
 const SITE = 'https://gustashare.vercel.app';
 const HOME_TITLE = 'GustaShare - Compartilhe sua tela gratuitamente';
 const HOME_DESCRIPTION =
@@ -50,7 +52,7 @@ export function seoRoom(roomCode) {
     description: code
       ? `Você foi convidado para a sala ${code} no GustaShare. Participe da chamada, compartilhe sua tela e converse com a galera.`
       : HOME_DESCRIPTION,
-    path: code ? `/room/${encodeURIComponent(code)}` : '/',
+    path: code ? `/room/${roomUrlSlug(code)}` : '/',
   });
 }
 

@@ -1,9 +1,29 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Download, X } from 'lucide-react';
 import { saveSession, loadSession } from '../lib/storage.js';
 import { PublicRoomsRegistry } from '../lib/RoomClient.js';
 import { isDesktop, DESKTOP_DOWNLOAD_URL } from '../lib/platform.js';
 import TitleBar from './TitleBar.jsx';
+import RoomIcon from './RoomIcon.jsx';
+
+const PERMANENT_ROOMS = [
+  'Vídeos de Terror',
+  'Gameplay',
+  'Valorant',
+  'League of Legends',
+  'Xracing',
+  'Codenames',
+  'StopotS',
+  'Gartic',
+  'Gartic Phone',
+  'Argumento',
+  'Conversa Fiada',
+  'Programação',
+  'Estudos',
+  'Música',
+  'Filminho',
+  'Networking',
+];
 
 export default function Home({ onJoin, invite }) {
   const saved = loadSession();
@@ -12,20 +32,6 @@ export default function Home({ onJoin, invite }) {
   const [publicRooms, setPublicRooms] = useState([]);
   const [joinDialog, setJoinDialog] = useState(null);
   const [dialogNickname, setDialogNickname] = useState('');
-  const [cardHeight, setCardHeight] = useState(null);
-  const cardRef = useRef(null);
-
-  useLayoutEffect(() => {
-    if (!publicRooms.length) return undefined;
-    function measure() {
-      if (!cardRef.current) return;
-      const isStacked = window.matchMedia('(max-width: 860px)').matches;
-      setCardHeight(isStacked ? null : cardRef.current.offsetHeight);
-    }
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [publicRooms.length, invite]);
 
   useEffect(() => {
     window.gustashare?.setWindowMode('home');
@@ -38,8 +44,20 @@ export default function Home({ onJoin, invite }) {
     }
 
     PublicRoomsRegistry.cleanup();
-    const rooms = Object.values(PublicRoomsRegistry.getAll());
-    setPublicRooms(rooms.sort((a, b) => b.createdAt - a.createdAt));
+    const dynamicRooms = Object.values(PublicRoomsRegistry.getAll());
+    const dynamicCodes = new Set(dynamicRooms.map((r) => r.roomCode));
+    const permanentRooms = PERMANENT_ROOMS.filter((name) => !dynamicCodes.has(name)).map((name) => ({
+      roomCode: name,
+      hostName: '',
+      participantCount: 0,
+      createdAt: 0,
+    }));
+    // Salas mais cheias aparecem primeiro; o sort é estável, então em caso
+    // de empate mantém a ordem de criação (dinâmicas) / a ordem da lista (permanentes).
+    const merged = [...dynamicRooms, ...permanentRooms].sort(
+      (a, b) => b.participantCount - a.participantCount
+    );
+    setPublicRooms(merged);
   }, [invite]);
 
   function submit(e) {
@@ -75,7 +93,7 @@ export default function Home({ onJoin, invite }) {
       {isDesktop && <TitleBar canMaximize={false} />}
       <div className="home-main">
         <div className={`home-box ${publicRooms.length > 0 ? 'with-rooms' : ''}`}>
-          <div className="home-card" ref={cardRef}>
+          <div className="home-card">
             <form onSubmit={submit}>
               <div className="home-hero">
                 <h1>GustaShare</h1>
@@ -116,8 +134,7 @@ export default function Home({ onJoin, invite }) {
           </div>
 
           {publicRooms.length > 0 && (
-            <div className="home-public-rooms" style={cardHeight ? { maxHeight: cardHeight } : undefined}>
-              <h3>Salas Públicas</h3>
+            <div className="home-public-rooms">
               <div className="public-rooms-list">
                 {publicRooms.map((room) => (
                   <button
@@ -126,11 +143,14 @@ export default function Home({ onJoin, invite }) {
                     className="public-room-card"
                     onClick={() => joinPublicRoom(room)}
                   >
+                    <RoomIcon name={room.roomCode} />
                     <div className="room-info">
                       <div className="room-name">{room.roomCode}</div>
-                      <div className="room-host">{room.hostName || 'Host desconhecido'}</div>
+                      {room.hostName ? <div className="room-host">{room.hostName}</div> : null}
                     </div>
-                    <div className="room-count">{room.participantCount} {room.participantCount === 1 ? 'pessoa' : 'pessoas'}</div>
+                    <div className={`room-count ${room.participantCount > 0 ? 'room-count-active' : 'room-count-empty'}`}>
+                      {room.participantCount} {room.participantCount === 1 ? 'pessoa' : 'pessoas'}
+                    </div>
                   </button>
                 ))}
               </div>
