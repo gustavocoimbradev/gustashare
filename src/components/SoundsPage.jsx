@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Play, RotateCcw } from 'lucide-react';
+import React from 'react';
+import { Play } from 'lucide-react';
 import {
   playChatSound,
   playMicOnSound,
@@ -8,16 +8,15 @@ import {
   playLeaveSound,
   playMediaOnSound,
 } from '../lib/sounds.js';
-import { SOUND_DEFS, getSoundSetting, setSoundSetting, resetSoundSetting } from '../lib/soundSettings.js';
 
-const PLAYERS = {
-  chat: playChatSound,
-  micOn: playMicOnSound,
-  micOff: playMicOffSound,
-  join: playJoinSound,
-  leave: playLeaveSound,
-  mediaOn: playMediaOnSound,
-};
+const SOUND_DEFS = [
+  { id: 'chat', label: 'Mensagem no chat', tier: 1, hint: 'Toca quando alguém manda uma mensagem', play: playChatSound },
+  { id: 'micOn', label: 'Microfone ligado', tier: 1, hint: 'Toca quando alguém ativa o microfone', play: playMicOnSound },
+  { id: 'micOff', label: 'Microfone desligado', tier: 1, hint: 'Toca quando alguém desativa o microfone', play: playMicOffSound },
+  { id: 'join', label: 'Alguém entrou na sala', tier: 2, hint: 'Toca quando um novo participante chega', play: playJoinSound },
+  { id: 'leave', label: 'Alguém saiu da sala', tier: 2, hint: 'Toca quando um participante sai', play: playLeaveSound },
+  { id: 'mediaOn', label: 'Tela ou câmera ligada', tier: 3, hint: 'Toca quando alguém começa a compartilhar tela/câmera', play: playMediaOnSound },
+];
 
 const TIER_LABEL = {
   1: 'Nível 1 — rotina',
@@ -25,100 +24,33 @@ const TIER_LABEL = {
   3: 'Nível 3 — algo importante mudou',
 };
 
-function SoundRow({ def }) {
-  const [settings, setSettings] = useState(() => getSoundSetting(def.id));
-
-  function update(patch) {
-    setSettings(setSoundSetting(def.id, patch));
-  }
-
-  function reset() {
-    setSettings(resetSoundSetting(def.id));
-  }
-
-  function play() {
-    PLAYERS[def.id]?.();
-  }
-
-  return (
-    <div className="sound-row">
-      <div className="sound-row-head">
-        <div>
-          <div className="sound-row-title">{def.label}</div>
-          <div className="sound-row-hint">{def.hint}</div>
-        </div>
-        <div className="sound-row-actions">
-          <button type="button" className="sound-play-btn" onClick={play}>
-            <Play size={14} />
-            Tocar
-          </button>
-          <button type="button" className="sound-reset-btn" onClick={reset} aria-label="Restaurar padrão">
-            <RotateCcw size={14} />
-          </button>
-        </div>
-      </div>
-
-      <div className="sound-row-controls">
-        <label className="sound-slider">
-          <span>Volume — {Math.round(settings.volume * 100)}%</span>
-          <input
-            type="range"
-            min="0"
-            max="2"
-            step="0.05"
-            value={settings.volume}
-            onChange={(e) => update({ volume: parseFloat(e.target.value) })}
-          />
-        </label>
-
-        <label className="sound-slider">
-          <span>Tom — {settings.pitch > 0 ? `+${settings.pitch}` : settings.pitch} semitons</span>
-          <input
-            type="range"
-            min="-12"
-            max="12"
-            step="1"
-            value={settings.pitch}
-            onChange={(e) => update({ pitch: parseFloat(e.target.value) })}
-          />
-        </label>
-
-        <label className="sound-slider">
-          <span>Velocidade — {settings.speed.toFixed(2)}x</span>
-          <input
-            type="range"
-            min="0.5"
-            max="2"
-            step="0.05"
-            value={settings.speed}
-            onChange={(e) => update({ speed: parseFloat(e.target.value) })}
-          />
-        </label>
-      </div>
-    </div>
-  );
-}
-
 export default function SoundsPage({ onBack }) {
-  const tiers = [1, 2, 3];
-
   return (
     <div className="sounds-page">
       <div className="sounds-page-header">
         <div>
           <h1>Efeitos sonoros</h1>
-          <p>Ouça cada som usado no app e ajuste volume/tom/velocidade — a mudança vale pra sala de verdade também.</p>
+          <p>Só pra ouvir cada som usado no app.</p>
         </div>
         <button type="button" className="sounds-back-btn" onClick={onBack}>
           Voltar
         </button>
       </div>
 
-      {tiers.map((tier) => (
+      {[1, 2, 3].map((tier) => (
         <div key={tier} className="sound-tier">
           <h2>{TIER_LABEL[tier]}</h2>
           {SOUND_DEFS.filter((d) => d.tier === tier).map((def) => (
-            <SoundRow key={def.id} def={def} />
+            <div key={def.id} className="sound-row">
+              <div>
+                <div className="sound-row-title">{def.label}</div>
+                <div className="sound-row-hint">{def.hint}</div>
+              </div>
+              <button type="button" className="sound-play-btn" onClick={def.play}>
+                <Play size={14} />
+                Tocar
+              </button>
+            </div>
           ))}
         </div>
       ))}

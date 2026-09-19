@@ -1,5 +1,4 @@
 import { getAudioContext } from './audioContext.js';
-import { getSoundSetting } from './soundSettings.js';
 
 // Nota pura em seno soa "achatada" e todas ficam parecidas entre si. Aqui
 // cada evento tem uma identidade: forma de onda, se tem filtro varrendo
@@ -8,14 +7,6 @@ import { getSoundSetting } from './soundSettings.js';
 //   1 (rotina, super frequente)  → chat, mic
 //   2 (acontecimento social)     → alguém entrou/saiu
 //   3 (algo importante mudou)    → tela/câmera ligada
-//
-// Cada nível também pode ser ajustado ao vivo (volume/tom/velocidade) pela
-// rota /sounds — ver soundSettings.js. É lido aqui, na hora de tocar, não
-// tem cópia separada: ajustar lá muda o som real do app.
-
-function semitonesToRatio(semitones) {
-  return 2 ** (semitones / 12);
-}
 
 function tone(ctx, { type = 'sine', freqFrom, freqTo = freqFrom, start, duration, peakGain, filterFrom, filterTo, filterType = 'lowpass', detune = 0 }) {
   const t0 = ctx.currentTime + start;
@@ -79,97 +70,65 @@ function click(ctx, { start, duration, peakGain, filterFrom, filterTo, filterTyp
   src.stop(t0 + duration + 0.02);
 }
 
-// Aplica os ajustes ao vivo (volume/tom/velocidade) de um som antes de
-// tocar: acelera/atrasa o tempo de cada camada, sobe/desce a afinação e
-// escala o ganho — sem precisar duplicar a lógica de cada efeito.
-function withSettings(id, layers) {
-  const { volume, pitch, speed } = getSoundSetting(id);
-  const pitchRatio = semitonesToRatio(pitch);
-  const speedRatio = speed > 0 ? speed : 1;
-  return layers.map((layer) => ({
-    ...layer,
-    start: layer.start / speedRatio,
-    duration: layer.duration / speedRatio,
-    peakGain: layer.peakGain * volume,
-    ...(layer.freqFrom !== undefined ? { freqFrom: layer.freqFrom * pitchRatio } : {}),
-    ...(layer.freqTo !== undefined ? { freqTo: layer.freqTo * pitchRatio } : {}),
-    ...(layer.filterFrom !== undefined ? { filterFrom: layer.filterFrom * pitchRatio } : {}),
-    ...(layer.filterTo !== undefined ? { filterTo: layer.filterTo * pitchRatio } : {}),
-  }));
-}
-
-function playTones(id, layers) {
-  const ctx = getAudioContext();
-  for (const layer of withSettings(id, layers)) tone(ctx, layer);
-}
-
-function playClicks(id, layers) {
-  const ctx = getAudioContext();
-  for (const layer of withSettings(id, layers)) click(ctx, layer);
-}
-
 // ----- Nível 1: rotina, toca o tempo todo — precisa ser curto e discreto -----
 
-// "Ding" de mensagem: dois harmônicos próximos tocando quase juntos, tipo sino pequeno.
+// "Ding" de mensagem bem discreto: dois harmônicos em seno tocando quase juntos.
 export function playChatSound() {
-  playTones('chat', [
-    { type: 'triangle', freqFrom: 1318.5, start: 0, duration: 0.06, peakGain: 0.06 },
-    { type: 'sine', freqFrom: 1975.5, start: 0.035, duration: 0.1, peakGain: 0.05 },
-  ]);
+  const ctx = getAudioContext();
+  tone(ctx, { type: 'sine', freqFrom: 1318.5, start: 0, duration: 0.05, peakGain: 0.04 });
+  tone(ctx, { type: 'sine', freqFrom: 1760, start: 0.04, duration: 0.08, peakGain: 0.035 });
 }
 
-// Switch mecânico ligando: clique seco + estalo tonal subindo.
+// Tick suave subindo: mic ligou.
 export function playMicOnSound() {
-  playClicks('micOn', [{ start: 0, duration: 0.045, peakGain: 0.11, filterFrom: 900, filterTo: 2600 }]);
-  playTones('micOn', [{ type: 'square', freqFrom: 660, freqTo: 990, start: 0.015, duration: 0.05, peakGain: 0.025 }]);
+  const ctx = getAudioContext();
+  tone(ctx, { type: 'sine', freqFrom: 700, freqTo: 1000, start: 0, duration: 0.08, peakGain: 0.045 });
 }
 
-// Switch mecânico desligando: mesmo clique, varredura invertida — sem nota tonal.
+// Mesma textura do de ligar, só que descendo — bem sutil, sem clique mecânico.
 export function playMicOffSound() {
-  playClicks('micOff', [{ start: 0, duration: 0.05, peakGain: 0.1, filterFrom: 2400, filterTo: 500 }]);
+  const ctx = getAudioContext();
+  tone(ctx, { type: 'sine', freqFrom: 700, freqTo: 420, start: 0, duration: 0.09, peakGain: 0.04 });
 }
 
 // ----- Nível 2: alguém entrou/saiu — acontecimento social, merece acorde -----
 
-// Acorde subindo (dó-mi-sol) com duas camadas levemente destoadas: mais
-// "corpo"/calor do que uma nota só, sensação de "boas-vindas".
+// Só duas notas curtas subindo, uma camada só — de propósito bem mais
+// discreto que o de compartilhar tela, pra não competir com ele.
 export function playJoinSound() {
-  const layers = [];
-  for (const detune of [0, 6]) {
-    layers.push(
-      { type: 'triangle', freqFrom: 523.25, start: 0, duration: 0.14, peakGain: 0.06, detune },
-      { type: 'triangle', freqFrom: 659.25, start: 0.07, duration: 0.14, peakGain: 0.06, detune },
-      { type: 'sine', freqFrom: 783.99, start: 0.14, duration: 0.24, peakGain: 0.08, detune },
-    );
-  }
-  playTones('join', layers);
+  const ctx = getAudioContext();
+  tone(ctx, { type: 'sine', freqFrom: 587.33, start: 0, duration: 0.08, peakGain: 0.045 });
+  tone(ctx, { type: 'sine', freqFrom: 880, start: 0.075, duration: 0.12, peakGain: 0.05 });
 }
 
-// Espelho do de entrar, mas descendo e com filtro fechando — sensação de
-// "porta se fechando", timbre mais fosco (menos brilho no final).
+// Bolha de sabão estourando (tipo Transformice) — bem sutil: um tom caindo
+// rápido (corpo da bolha) e um estalinho agudo no fim (o "pop").
 export function playLeaveSound() {
-  playTones('leave', [
-    { type: 'triangle', freqFrom: 783.99, freqTo: 392, start: 0, duration: 0.24, peakGain: 0.075, filterFrom: 5000, filterTo: 350 },
-    { type: 'sine', freqFrom: 523.25, freqTo: 261.6, start: 0.02, duration: 0.22, peakGain: 0.05 },
-  ]);
+  const ctx = getAudioContext();
+  tone(ctx, { type: 'sine', freqFrom: 900, freqTo: 340, start: 0, duration: 0.1, peakGain: 0.045 });
+  click(ctx, { start: 0.07, duration: 0.03, peakGain: 0.035, filterFrom: 3000, filterTo: 1200 });
 }
 
 // ----- Nível 3: tela/câmera ligada — o evento mais importante da sala -----
 
-// Mini-fanfarra: arpejo de 4 notas em oitava, cada uma com camada
-// destoada por cima (coro/shimmer) e cauda mais longa — bem mais presente
-// e "grande" que os outros dois níveis, de propósito.
+// Mini-fanfarra: um "sopro" grave subindo (riser, prepara a entrada) por
+// baixo de um arpejo de 4 notas em oitava, cada uma com camada destoada
+// por cima (coro/shimmer), fechando com um brilho agudo na última nota —
+// de propósito bem mais presente/"grande" que os outros dois níveis.
 export function playMediaOnSound() {
+  const ctx = getAudioContext();
+  click(ctx, { start: 0, duration: 0.3, peakGain: 0.035, filterFrom: 200, filterTo: 3200, filterType: 'lowpass' });
+
   const notes = [523.25, 659.25, 783.99, 1046.5];
-  const layers = [];
+  let lastStart = 0;
   notes.forEach((freq, i) => {
     const start = i * 0.075;
-    const duration = i === notes.length - 1 ? 0.32 : 0.16;
-    const peak = i === notes.length - 1 ? 0.12 : 0.09;
-    layers.push(
-      { type: 'triangle', freqFrom: freq, start, duration, peakGain: peak },
-      { type: 'sine', freqFrom: freq, start, duration: duration + 0.05, peakGain: peak * 0.55, detune: 8 },
-    );
+    const duration = i === notes.length - 1 ? 0.34 : 0.16;
+    const peak = i === notes.length - 1 ? 0.13 : 0.095;
+    lastStart = start;
+    tone(ctx, { type: 'triangle', freqFrom: freq, start, duration, peakGain: peak });
+    tone(ctx, { type: 'sine', freqFrom: freq, start, duration: duration + 0.05, peakGain: peak * 0.55, detune: 8 });
   });
-  playTones('mediaOn', layers);
+  // brilho final agudo, uma oitava acima da última nota — o "toque de acabamento".
+  tone(ctx, { type: 'sine', freqFrom: 2093, start: lastStart + 0.1, duration: 0.28, peakGain: 0.055, detune: -6 });
 }
