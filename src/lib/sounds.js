@@ -117,12 +117,12 @@ export function playMediaOnSound() {
   const ctx = getAudioContext();
   click(ctx, { start: 0, duration: 0.3, peakGain: 0.035, filterFrom: 200, filterTo: 3200, filterType: 'lowpass' });
 
+  // As 4 notas com o mesmo peso — a última não fica isolada/mais alta no
+  // final soando feito "ding" de moeda, só fecha o acorde junto com o resto.
   const notes = [523.25, 659.25, 783.99, 1046.5];
   notes.forEach((freq, i) => {
     const start = i * 0.075;
-    const duration = i === notes.length - 1 ? 0.34 : 0.16;
-    const peak = i === notes.length - 1 ? 0.13 : 0.095;
-    tone(ctx, { type: 'triangle', freqFrom: freq, start, duration, peakGain: peak });
-    tone(ctx, { type: 'sine', freqFrom: freq, start, duration: duration + 0.05, peakGain: peak * 0.55, detune: 8 });
+    tone(ctx, { type: 'triangle', freqFrom: freq, start, duration: 0.16, peakGain: 0.095 });
+    tone(ctx, { type: 'sine', freqFrom: freq, start, duration: 0.21, peakGain: 0.052, detune: 8 });
   });
 }
