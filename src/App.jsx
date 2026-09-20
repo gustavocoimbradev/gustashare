@@ -8,6 +8,7 @@ import { saveSession, loadSession } from './lib/storage.js';
 import { parseInviteFromUrl, setRoomUrl, clearRoomUrl, isDesktop } from './lib/platform.js';
 import { seoHome, seoRoom } from './lib/seo.js';
 import { useSingleInstance } from './lib/singleInstance.js';
+import { ensureNotificationPermission } from './lib/localNotifications.js';
 
 // Rota de debug pra ouvir/ajustar os efeitos sonoros (ver SoundsPage). Só
 // existe no web — no desktop o Electron carrega direto de file://, sem
@@ -30,6 +31,10 @@ export default function App() {
   // (app.requestSingleInstanceLock); aqui é só pra evitar duas abas do
   // navegador abertas ao mesmo tempo.
   const blocked = useSingleInstance(!isDesktop);
+
+  useEffect(() => {
+    ensureNotificationPermission();
+  }, []);
 
   useEffect(() => {
     if (!window.gustashare?.onDeepLink) return undefined;

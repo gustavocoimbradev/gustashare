@@ -13,7 +13,7 @@ import { SCREEN_DISPLAY_MEDIA } from '../lib/webrtc.js';
 import { isDesktop } from '../lib/platform.js';
 import { isPermanentRoomName } from '../lib/permanentRooms.js';
 import { watchRoomAndAnnounceJoin } from '../lib/pushNotifications.js';
-import { ensureLocalNotificationPermission, notifyLocalChat } from '../lib/localNotifications.js';
+import { notifyLocalChat } from '../lib/localNotifications.js';
 
 const STREAM_WARNING_LABEL = {
   screen: (nick) => `${nick} não está conseguindo ver sua tela.`,
@@ -45,10 +45,6 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
 
   useEffect(() => {
     window.gustashare?.setWindowMode('room');
-  }, []);
-
-  useEffect(() => {
-    ensureLocalNotificationPermission();
   }, []);
 
   useEffect(() => {

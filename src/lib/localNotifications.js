@@ -4,10 +4,15 @@
 // Diferente da de "fulano entrou na sala" (pushNotifications.js), que
 // precisa sobreviver com o site fechado — aqui não tem esse requisito,
 // então não vale a complexidade extra de Web Push.
+//
+// `ensureNotificationPermission` é chamada uma vez, em App.jsx — pedir a
+// permissão nasce da entrada no app como um todo, não da sala: é a mesma
+// permissão do navegador que o pushNotifications.js reaproveita depois pra
+// assinar o push, então não faz sentido pedir de novo por sala/página.
 
 export const localNotificationsSupported = typeof window !== 'undefined' && 'Notification' in window;
 
-export async function ensureLocalNotificationPermission() {
+export async function ensureNotificationPermission() {
   if (!localNotificationsSupported) return 'unsupported';
   if (Notification.permission !== 'default') return Notification.permission;
   try {
