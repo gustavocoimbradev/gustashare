@@ -28,10 +28,13 @@ export function notifyLocalChat(nickname, text) {
   // notificação é só pra quando ela não tá olhando.
   if (typeof document !== 'undefined' && document.hasFocus()) return;
   try {
+    // Sem `tag`: com uma tag fixa, a 2ª notificação em diante substitui a
+    // anterior *em silêncio* (sem popup/som) em vez de alertar de novo —
+    // é assim que a Notification API funciona (só re-alerta com a mesma
+    // tag se `renotify: true`). Cada mensagem deve alertar por si.
     const notif = new Notification(nickname || 'Alguém', {
       body: text,
       icon: '/icon-192.png',
-      tag: 'gustashare-chat',
     });
     notif.onclick = () => {
       window.focus?.();
