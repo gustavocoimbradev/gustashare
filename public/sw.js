@@ -3,6 +3,20 @@
 // GustaShare não precisa funcionar offline, só precisa de um service
 // worker vivo pra receber o evento `push` mesmo com a aba fechada.
 
+// Cópia mínima de `roomUrlSlug` (src/lib/platform.js) — o service worker
+// não importa módulos do app, então duplica só o essencial. Se aquela
+// função mudar, atualiza aqui também.
+function roomUrlSlug(roomCode) {
+  const slug = String(roomCode || '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'sala';
+}
+
 self.addEventListener('push', (event) => {
   let payload = { title: 'GustaShare', body: '' };
   try {
@@ -20,17 +34,26 @@ self.addEventListener('push', (event) => {
       body: payload.body,
       icon: '/icon-192.png',
       badge: '/icon-192.png',
+      // `data` sobrevive até o clique — usado lá embaixo pra abrir a sala
+      // certa. O convite diário não tem `roomCode`, então cai no fallback ('/').
+      data: { roomCode: payload.roomCode },
     })
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const roomCode = event.notification.data?.roomCode;
+  const targetPath = roomCode ? `/room/${roomUrlSlug(roomCode)}` : '/';
+
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      const existing = clients.find((c) => 'focus' in c);
-      if (existing) return existing.focus();
-      return self.clients.openWindow('/');
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
+      const existing = clientList.find((c) => 'focus' in c);
+      if (existing) {
+        if ('navigate' in existing) await existing.navigate(targetPath);
+        return existing.focus();
+      }
+      return self.clients.openWindow(targetPath);
     })
   );
 });

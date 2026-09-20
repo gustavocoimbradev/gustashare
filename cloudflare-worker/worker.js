@@ -51,6 +51,17 @@ function roomKey(roomCodeLower) {
   return `room:${roomCodeLower}`;
 }
 
+const MAX_WATCHED_ROOMS = 3;
+
+// `sub:<deviceId>` guarda `roomCodes` (as últimas até 3 salas que o device
+// entrou, ordem do mais antigo pro mais novo). Registros de antes dessa
+// mudança tinham só `roomCode` (uma sala só) — trata os dois formatos.
+function watchedRoomsOf(entry) {
+  if (!entry) return [];
+  if (Array.isArray(entry.roomCodes)) return entry.roomCodes;
+  return entry.roomCode ? [entry.roomCode] : [];
+}
+
 function vapidFromEnv(env) {
   return {
     subject: env.VAPID_SUBJECT || 'https://gustashare.vercel.app',
@@ -59,41 +70,52 @@ function vapidFromEnv(env) {
   };
 }
 
-// Manda `message` pra cada deviceId em `deviceIds`, limpando do KV quem
-// tiver inscrição morta (404/410 — desinstalou, limpou os dados do site
-// etc). Devolve quantos receberam de verdade.
-async function sendPushToDevices(env, deviceIds, message, { onStaleRoom } = {}) {
-  if (!deviceIds.length) return 0;
+// Manda `message` pra cada deviceId em `deviceIds`. Devolve quantos
+// receberam de verdade; pra quem tiver inscrição morta (404/410 —
+// desinstalou, limpou os dados do site etc), a lista de salas que
+// vigiava (quem chama decide como tirar o device dessas listas, porque o
+// jeito de montar `deviceIds` muda por caso — watchers de uma sala,
+// listagem geral pro convite diário); e, se `requireRoomCode` foi
+// passado, quem apareceu na lista de watchers dessa sala mas cujo
+// registro (`sub:<device>`) já não cita mais essa sala — o KV é
+// eventualmente consistente, então o índice reverso (`room:<code>`) pode
+// ficar por um instante à frente ou atrás do registro do device quando
+// ele troca de sala rápido; isso auto-corrige na próxima vez que alguém
+// entrar nessa sala.
+async function sendPushToDevices(env, deviceIds, message, { requireRoomCode } = {}) {
+  if (!deviceIds.length) return { notified: 0, stale: [], notWatching: [] };
   const vapid = vapidFromEnv(env);
   let notified = 0;
-  const staleIds = [];
+  const stale = [];
+  const notWatching = [];
 
   await Promise.all(
     deviceIds.map(async (deviceId) => {
       const entry = await env.PUSH_SUBS.get(subKey(deviceId), 'json');
       if (!entry?.subscription) {
-        staleIds.push(deviceId);
+        stale.push({ deviceId, roomCodes: watchedRoomsOf(entry) });
+        return;
+      }
+      if (requireRoomCode && !watchedRoomsOf(entry).includes(requireRoomCode)) {
+        notWatching.push(deviceId);
         return;
       }
       try {
         const payload = await buildPushPayload(message, entry.subscription, vapid);
         const res = await fetch(entry.subscription.endpoint, payload);
         if (res.status === 404 || res.status === 410) {
-          staleIds.push(deviceId);
+          stale.push({ deviceId, roomCodes: watchedRoomsOf(entry) });
         } else if (res.ok) {
           notified += 1;
         }
       } catch (err) {
         console.error('falha ao enviar push:', err);
       }
-      if (staleIds.includes(deviceId) && entry?.roomCode) {
-        await onStaleRoom?.(deviceId, entry.roomCode);
-      }
     })
   );
 
-  await Promise.all(staleIds.map((id) => env.PUSH_SUBS.delete(subKey(id))));
-  return notified;
+  await Promise.all(stale.map(({ deviceId }) => env.PUSH_SUBS.delete(subKey(deviceId))));
+  return { notified, stale, notWatching };
 }
 
 async function removeDeviceFromRoom(env, deviceId, roomCodeLower) {
@@ -102,6 +124,22 @@ async function removeDeviceFromRoom(env, deviceId, roomCodeLower) {
   const next = room.filter((id) => id !== deviceId);
   if (next.length) await env.PUSH_SUBS.put(roomKey(roomCodeLower), JSON.stringify(next));
   else await env.PUSH_SUBS.delete(roomKey(roomCodeLower));
+}
+
+async function addDeviceToRoom(env, deviceId, roomCodeLower) {
+  const room = (await env.PUSH_SUBS.get(roomKey(roomCodeLower), 'json')) || [];
+  if (room.includes(deviceId)) return;
+  room.push(deviceId);
+  await env.PUSH_SUBS.put(roomKey(roomCodeLower), JSON.stringify(room));
+}
+
+// Limpa do KV as inscrições que morreram durante um `sendPushToDevices`,
+// tirando cada device de TODAS as salas que ele vigiava (não só da sala
+// da chamada atual) — senão ficava lixo órfão nas outras.
+async function cleanupStaleDevices(env, stale) {
+  await Promise.all(
+    stale.flatMap(({ deviceId, roomCodes }) => roomCodes.map((code) => removeDeviceFromRoom(env, deviceId, code)))
+  );
 }
 
 async function handleTurn(env) {
@@ -129,9 +167,9 @@ async function handleTurn(env) {
   }
 }
 
-// Grava a inscrição do device pra sala dada, tirando ele de uma sala
-// anterior se ele tava vigiando outra (só se vigia uma sala por vez — a
-// última sala personalizada que entrou).
+// Grava a inscrição do device pra sala dada, mantendo só as últimas
+// MAX_WATCHED_ROOMS salas que ele entrou (ordem de mais antiga pra mais
+// nova) — entrar numa 4ª sala derruba a mais antiga da lista.
 async function handleSubscribe(request, env) {
   if (!env.PUSH_SUBS) return json({ error: 'worker sem KV PUSH_SUBS configurado' }, 500);
 
@@ -149,20 +187,19 @@ async function handleSubscribe(request, env) {
   }
 
   const previous = await env.PUSH_SUBS.get(subKey(deviceId), 'json');
-  if (previous?.roomCode && previous.roomCode !== roomCode) {
-    await removeDeviceFromRoom(env, deviceId, previous.roomCode);
-  }
+  const merged = [...watchedRoomsOf(previous).filter((code) => code !== roomCode), roomCode];
+  const evictedCount = Math.max(0, merged.length - MAX_WATCHED_ROOMS);
+  const evicted = merged.slice(0, evictedCount);
+  const roomCodes = merged.slice(evictedCount);
+
+  await Promise.all(evicted.map((code) => removeDeviceFromRoom(env, deviceId, code)));
 
   await env.PUSH_SUBS.put(
     subKey(deviceId),
-    JSON.stringify({ subscription, roomCode, nickname: String(nickname || '').slice(0, 60) })
+    JSON.stringify({ subscription, roomCodes, nickname: String(nickname || '').slice(0, 60) })
   );
 
-  const room = (await env.PUSH_SUBS.get(roomKey(roomCode), 'json')) || [];
-  if (!room.includes(deviceId)) {
-    room.push(deviceId);
-    await env.PUSH_SUBS.put(roomKey(roomCode), JSON.stringify(room));
-  }
+  await addDeviceToRoom(env, deviceId, roomCode);
 
   return json({ ok: true });
 }
@@ -181,7 +218,7 @@ async function handleUnsubscribe(request, env) {
   if (!deviceId) return json({ error: 'deviceId faltando' }, 400);
 
   const previous = await env.PUSH_SUBS.get(subKey(deviceId), 'json');
-  if (previous?.roomCode) await removeDeviceFromRoom(env, deviceId, previous.roomCode);
+  await Promise.all(watchedRoomsOf(previous).map((code) => removeDeviceFromRoom(env, deviceId, code)));
   await env.PUSH_SUBS.delete(subKey(deviceId));
 
   return json({ ok: true });
@@ -214,13 +251,17 @@ async function handleNotifyJoin(request, env) {
     data: {
       title: `${nickname || 'Alguém'} entrou na sala`,
       body: body.roomCode,
+      // pro clique da notificação levar pra sala certa (ver public/sw.js)
+      roomCode: body.roomCode,
     },
     options: { ttl: 60, urgency: 'normal' },
   };
 
-  const notified = await sendPushToDevices(env, targets, message, {
-    onStaleRoom: (deviceId) => removeDeviceFromRoom(env, deviceId, roomCode),
+  const { notified, stale, notWatching } = await sendPushToDevices(env, targets, message, {
+    requireRoomCode: roomCode,
   });
+  await cleanupStaleDevices(env, stale);
+  await Promise.all(notWatching.map((deviceId) => removeDeviceFromRoom(env, deviceId, roomCode)));
 
   return json({ ok: true, notified });
 }
@@ -231,7 +272,7 @@ async function handleNotifyJoin(request, env) {
 // determinado por um hash da data — sem isso, cada tick do cron teria que
 // concordar em qual foi o horário sorteado, e não dá pra sortear de
 // verdade sem guardar estado antes), manda um convite pra todo mundo que
-// já se inscreveu alguma vez (entrou em pelo menos uma sala personalizada).
+// já se inscreveu alguma vez (entrou em pelo menos uma sala).
 //
 // O cron roda a cada 15min (ver wrangler.toml) só checando "é agora?" —
 // o KV guarda `daily-invite:<data>` pra nunca mandar duas vezes no mesmo
@@ -313,9 +354,8 @@ async function handleScheduled(env, now = new Date()) {
     options: { ttl: 6 * 60 * 60, urgency: 'low' },
   };
 
-  await sendPushToDevices(env, deviceIds, message, {
-    onStaleRoom: (deviceId, roomCode) => removeDeviceFromRoom(env, deviceId, roomCode),
-  });
+  const { stale } = await sendPushToDevices(env, deviceIds, message);
+  await cleanupStaleDevices(env, stale);
 }
 
 export default {
