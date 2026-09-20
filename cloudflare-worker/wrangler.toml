@@ -2,6 +2,29 @@ name = "gustashare-turn"
 main = "worker.js"
 compatibility_date = "2024-11-01"
 
-# TURN_KEY_ID e TURN_API_TOKEN NÃO vão aqui — são segredos, configurados via:
+# TURN_KEY_ID, TURN_API_TOKEN e VAPID_PRIVATE_KEY NÃO vão aqui — são
+# segredos, configurados via:
 #   wrangler secret put TURN_KEY_ID
 #   wrangler secret put TURN_API_TOKEN
+#   wrangler secret put VAPID_PRIVATE_KEY
+
+# VAPID_PUBLIC_KEY não é segredo (é a mesma chave usada no cliente, em
+# src/lib/pushNotifications.js) — só documenta aqui pro `env.VAPID_PUBLIC_KEY`
+# do worker.js funcionar. Pra gerar um par novo: node scripts/generate-vapid-keys.js
+[vars]
+VAPID_PUBLIC_KEY = "BE6HXXgJM-DfYaYKAa8WxbzjXMGRXHE02T7Yi2eOPPwrnDiUmzhfsG-XZuXm3ebNycqm2uUMQNZsNQxvcfYjPHE"
+VAPID_SUBJECT = "https://gustashare.vercel.app"
+
+# Guarda quem quer ser avisado ("device -> sala") e o índice reverso
+# ("sala -> devices"). Criar uma vez com:
+#   wrangler kv namespace create PUSH_SUBS
+# e colar o id gerado aqui embaixo.
+[[kv_namespaces]]
+binding = "PUSH_SUBS"
+id = "bb6b1a39f5294a74ad2e649fdb6da734"
+
+# Dispara o handler `scheduled` do worker.js a cada 15min — ele mesmo
+# decide (via hash da data) se "agora" é o horário sorteado do convite
+# diário, então na prática só manda notificação uma vez por dia.
+[triggers]
+crons = ["*/15 * * * *"]

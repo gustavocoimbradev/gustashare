@@ -12,6 +12,8 @@ import { captureWindowNative } from '../lib/nativeCapture.js';
 import { SCREEN_DISPLAY_MEDIA } from '../lib/webrtc.js';
 import { isDesktop } from '../lib/platform.js';
 import { isPermanentRoomName } from '../lib/permanentRooms.js';
+import { watchRoomAndAnnounceJoin } from '../lib/pushNotifications.js';
+import { ensureLocalNotificationPermission, notifyLocalChat } from '../lib/localNotifications.js';
 
 const STREAM_WARNING_LABEL = {
   screen: (nick) => `${nick} não está conseguindo ver sua tela.`,
@@ -43,6 +45,10 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
 
   useEffect(() => {
     window.gustashare?.setWindowMode('room');
+  }, []);
+
+  useEffect(() => {
+    ensureLocalNotificationPermission();
   }, []);
 
   useEffect(() => {
@@ -117,6 +123,7 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
       setMessages((prev) => [...prev, e.detail]);
       if (e.detail.id !== client.peer?.id) {
         playChatSound();
+        notifyLocalChat(e.detail.nickname, e.detail.text);
       }
     };
     const onStreamFailed = (e) => {
@@ -154,6 +161,7 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
       setSelfId(client.peer.id);
       setReady(true);
       setIsHost(client.isHost);
+      watchRoomAndAnnounceJoin(roomCode, nickname);
     });
 
     return () => {

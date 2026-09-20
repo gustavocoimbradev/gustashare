@@ -1,6 +1,8 @@
 node_modules
 dist
 release
+cloudflare-worker/.dev.vars
+cloudflare-worker/.wrangler
 update-server/*.exe
 /.vercel
 
