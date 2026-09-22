@@ -157,9 +157,16 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
     const onHostInfo = (e) => setHostId(e.detail);
     client.addEventListener('host-info', onHostInfo);
 
+    // `ready` só vira true quando o roster de verdade (host + demais
+    // membros) chega — não basta o nosso próprio peer ter conectado no
+    // broker de sinalização. Sem isso a sala aparecia "pronta" cedo demais
+    // e a pessoa se via sozinha por alguns segundos até o roster real
+    // chegar (ver `room-ready` em RoomClient).
+    const onRoomReady = () => setReady(true);
+    client.addEventListener('room-ready', onRoomReady);
+
     client.start().then(() => {
       setSelfId(client.peer.id);
-      setReady(true);
       setIsHost(client.isHost);
       watchRoomAndAnnounceJoin(roomCode, nickname);
     });
@@ -178,9 +185,24 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
       client.removeEventListener('stream-recovered', onStreamRecovered);
       client.removeEventListener('public-toggle', onPublicToggle);
       client.removeEventListener('host-info', onHostInfo);
+      client.removeEventListener('room-ready', onRoomReady);
       client.leave();
     };
   }, [nickname, roomCode]);
+
+  // Trava de segurança: se por algum motivo (broker fora do ar, host
+  // inalcançável, rede bloqueando WebSocket) a sala nunca ficar pronta,
+  // não deixa a pessoa presa no spinner pra sempre — avisa que algo deu
+  // errado depois de 30s em vez de girar infinitamente.
+  const [loadTimedOut, setLoadTimedOut] = useState(false);
+  useEffect(() => {
+    if (ready) {
+      setLoadTimedOut(false);
+      return undefined;
+    }
+    const timer = setTimeout(() => setLoadTimedOut(true), 30000);
+    return () => clearTimeout(timer);
+  }, [ready, nickname, roomCode]);
 
   useEffect(() => {
     if (!focusedId) return;
@@ -420,8 +442,23 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
       {!ready && (
         <div className="connecting-overlay">
           <div className="connecting-box">
-            <div className="connecting-spinner" />
-            <h2>Acessando a sala</h2>
+            {loadTimedOut ? (
+              <>
+                <AlertTriangle size={30} />
+                <h2>Não foi possível entrar na sala</h2>
+                <p className="connecting-hint">
+                  Algo deu errado ao conectar — pode ser sua internet ou instabilidade no servidor de sinalização.
+                </p>
+                <button type="button" className="connecting-retry" onClick={() => window.location.reload()}>
+                  Tentar de novo
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="connecting-spinner" />
+                <h2>Acessando a sala</h2>
+              </>
+            )}
           </div>
         </div>
       )}

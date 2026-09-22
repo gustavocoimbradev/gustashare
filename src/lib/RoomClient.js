@@ -139,6 +139,9 @@ export default class RoomClient extends EventTarget {
         // definição — sem isso, a contagem de gente na listagem da home só
         // atualizava se o host lembrasse de clicar em "tornar pública".
         if (isPermanentRoomName(this.roomCode)) this.setPublic(true);
+        // Host não precisa esperar ninguém — a sala já está pronta com o
+        // roster real (só ele mesmo, por enquanto) no momento que assume.
+        this.emit('room-ready');
         resolve();
       };
 
@@ -228,6 +231,9 @@ export default class RoomClient extends EventTarget {
       // vista do diff). Reempurra tudo que estamos compartilhando pra
       // quem já conhecemos, sem depender de detectar alguém como "novo".
       this._resyncStreamsWithRoster();
+      // Só agora o roster real (host + demais membros) já chegou — antes
+      // disso a UI via só a gente mesmo na sala.
+      this.emit('room-ready');
     };
 
     conn.on('open', () => {
