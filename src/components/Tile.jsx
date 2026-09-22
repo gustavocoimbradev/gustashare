@@ -257,13 +257,10 @@ export default function Tile({
   // (ver `appendLocalDrawPoint`), sem esperar o eco da rede.
   useEffect(() => {
     if (!client || !userId || !activeMediaType) return undefined;
-    console.debug('[draw] listener ligado', { userId, activeMediaType });
     function onDrawPoint(e) {
       const msg = e.detail;
-      console.debug('[draw] Tile recebeu evento', { userId, activeMediaType, msg });
       if (!msg || msg.authorId === client.peer?.id) return;
       if (msg.targetId !== userId || msg.mediaType !== activeMediaType) return;
-      console.debug('[draw] passou no filtro, desenhando', { userId, activeMediaType });
       const key = `${msg.authorId}:${msg.strokeId}`;
       let stroke = strokesRef.current.get(key);
       if (!stroke) {
