@@ -50,24 +50,31 @@ const THEME_ICONS = {
 
 // Marcas reais (sites/apps próprios) — usamos o ícone/favicon/logo oficial
 // em vez de um ícone genérico.
+//
+// Caminho prefixado com `import.meta.env.BASE_URL` (não `/room-icons/...`
+// fixo): no build desktop o Vite usa `base: './'` (file://, caminho
+// absoluto vira "raiz do disco" e quebra a imagem) e no build web usa
+// `base: '/'` — ver vite.config.js.
+const ICON_BASE = `${import.meta.env.BASE_URL}room-icons/`;
+
 const IMAGE_ICONS = {
-  Codenames: '/room-icons/codenames.png',
-  StopotS: '/room-icons/stopots.png',
-  Gartic: '/room-icons/gartic.png',
-  'Gartic Phone': '/room-icons/gartic-phone.png',
-  Argumento: '/room-icons/argumento.png',
-  Xracing: '/room-icons/xracing.png',
-  Minecraft: '/room-icons/minecraft.svg',
-  CS2: '/room-icons/cs2.png',
-  Fortnite: '/room-icons/fortnite.png',
-  'EA FC': '/room-icons/eafc.png',
-  GTA: '/room-icons/gta.png',
-  'Free Fire': '/room-icons/freefire.png',
-  'Rocket League': '/room-icons/rocketleague.svg',
-  'Just Dance': '/room-icons/justdance.svg',
-  Uno: '/room-icons/uno.svg',
-  'Skribbl.io': '/room-icons/skribbl.png',
-  Jackbox: '/room-icons/jackbox.png',
+  Codenames: `${ICON_BASE}codenames.png`,
+  StopotS: `${ICON_BASE}stopots.png`,
+  Gartic: `${ICON_BASE}gartic.png`,
+  'Gartic Phone': `${ICON_BASE}gartic-phone.png`,
+  Argumento: `${ICON_BASE}argumento.png`,
+  Xracing: `${ICON_BASE}xracing.png`,
+  Minecraft: `${ICON_BASE}minecraft.svg`,
+  CS2: `${ICON_BASE}cs2.png`,
+  Fortnite: `${ICON_BASE}fortnite.png`,
+  'EA FC': `${ICON_BASE}eafc.png`,
+  GTA: `${ICON_BASE}gta.png`,
+  'Free Fire': `${ICON_BASE}freefire.png`,
+  'Rocket League': `${ICON_BASE}rocketleague.svg`,
+  'Just Dance': `${ICON_BASE}justdance.svg`,
+  Uno: `${ICON_BASE}uno.svg`,
+  'Skribbl.io': `${ICON_BASE}skribbl.png`,
+  Jackbox: `${ICON_BASE}jackbox.png`,
 };
 
 // Marcas com logo próprio desenhado em path (path preenchido, como no

@@ -34,7 +34,9 @@ export function notifyLocalChat(nickname, text) {
     // tag se `renotify: true`). Cada mensagem deve alertar por si.
     const notif = new Notification(nickname || 'Alguém', {
       body: text,
-      icon: '/icon-192.png',
+      // Mesma regra do RoomIcon.jsx: caminho fixo com `/` quebra no
+      // desktop (Electron carrega via file://, vira raiz do disco).
+      icon: `${import.meta.env.BASE_URL}icon-192.png`,
     });
     notif.onclick = () => {
       window.focus?.();

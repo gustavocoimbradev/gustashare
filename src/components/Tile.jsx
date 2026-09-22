@@ -7,6 +7,22 @@ import ClientBadge from './ClientBadge.jsx';
 import HostBadge from './HostBadge.jsx';
 import MicBadge from './MicBadge.jsx';
 
+const NET_QUALITY_LABEL = { 1: 'Conexão fraca', 2: 'Conexão média', 3: 'Conexão boa' };
+
+// Rotulado explicitamente (Ping/Buffer/FPS) em vez de só números soltos —
+// bitrate e perda entram só quando disponíveis/relevantes, sem label fixo
+// pra não empapuçar o pill à toa.
+function formatNetStats(stats) {
+  const parts = [
+    `Ping: ${stats.rttMs != null ? `${stats.rttMs}ms` : '—'}`,
+    `Buffer: ${stats.bufferMs != null ? `${stats.bufferMs}ms` : '—'}`,
+    `FPS: ${stats.fps != null ? stats.fps : '—'}`,
+  ];
+  if (stats.bitrateKbps != null) parts.push(`${stats.bitrateKbps}kbps`);
+  if (stats.lossPct) parts.push(`${stats.lossPct}% perda`);
+  return parts.join(' · ');
+}
+
 function VolumeControl({ label, volume, silent, open, onToggleOpen, onChange, compact }) {
   const VolumeIcon = silent ? VolumeX : volume < 0.4 ? Volume1 : Volume2;
   const sliderValue = silent ? 0 : volume;
@@ -213,6 +229,8 @@ export default function Tile({
     setStreamMuted(next === 0);
   }
 
+  const netStatsText = stats ? formatNetStats(stats) : null;
+
   return (
     <div
       className={`tile ${speaking ? 'speaking' : ''} ${expanded ? 'expanded' : ''} ${focused ? 'focused' : ''}`}
@@ -236,26 +254,38 @@ export default function Tile({
           />
         ) : null}
 
-        {!mainStream && pendingMedia && (
-          <div className="tile-pending">
-            <span className="tile-pending-spinner" />
-            {pendingMedia === 'screen' ? 'Carregando tela…' : 'Carregando câmera…'}
+        {/* Enquanto a mídia não chega (sinalizada mas call ainda não conectou)
+            OU já conectou mas o primeiro frame ainda não decodificou — cobre
+            o avatar com preto + spinner em vez de deixar o círculo com as
+            iniciais aparecendo, que passava a falsa impressão de erro. */}
+        {((pendingMedia && !mainStream) || (mainStream && !videoReady)) && (
+          <div className="tile-pending-fill">
+            <span className="tile-pending-spinner-lg" />
+            {pendingMedia && !mainStream && (
+              <span className="tile-pending-label">
+                {pendingMedia === 'screen' ? 'Carregando tela…' : 'Carregando câmera…'}
+              </span>
+            )}
           </div>
         )}
 
         {stats && (
-          <div
-            className="tile-net"
-            title={`Ping ${stats.rttMs != null ? `${stats.rttMs}ms` : '—'} · FPS ${stats.fps != null ? stats.fps : '—'} · Buffer ${stats.bufferMs != null ? `${stats.bufferMs}ms` : '—'}${stats.bitrateKbps != null ? ` · ${stats.bitrateKbps}kbps` : ''}${stats.lossPct ? ` · ${stats.lossPct}% de perda` : ''}`}
-          >
-            <span className="tile-net-text">
-              {stats.rttMs != null ? `${stats.rttMs}ms` : '—ms'}
-              {' · '}
-              {stats.fps != null ? `${stats.fps}fps` : '—fps'}
-              {' · '}
-              buffer {stats.bufferMs != null ? `${stats.bufferMs}ms` : '—'}
-            </span>
+          <div className="tile-net" title={netStatsText}>
+            <span className="tile-net-text">{netStatsText}</span>
           </div>
+        )}
+
+        {stats && (
+          <Tooltip label={NET_QUALITY_LABEL[stats.quality] || 'Conexão'}>
+            <span
+              className={`tile-net-badge tile-net-q${stats.quality}`}
+              aria-label={NET_QUALITY_LABEL[stats.quality] || 'Conexão'}
+            >
+              <i />
+              <i />
+              <i />
+            </span>
+          </Tooltip>
         )}
 
         {showPip && (
@@ -283,13 +313,6 @@ export default function Tile({
         {isHost && <HostBadge />}
         <ClientBadge platform={platform} />
         <MicBadge on={Boolean(micStream)} />
-        {stats && (
-          <span className={`tile-net-badge tile-net-q${stats.quality}`} title="Qualidade da conexão">
-            <i />
-            <i />
-            <i />
-          </span>
-        )}
       </div>
 
       {!isSelf && micSilent && !hover && (
