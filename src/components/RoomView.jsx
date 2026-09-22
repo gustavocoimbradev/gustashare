@@ -3,6 +3,8 @@ import RoomClient from '../lib/RoomClient.js';
 import Tile from './Tile.jsx';
 import Chat from './Chat.jsx';
 import ScreenPickerModal from './ScreenPickerModal.jsx';
+import WindowAudioNotice from './WindowAudioNotice.jsx';
+import DesktopPromoBanner from './DesktopPromoBanner.jsx';
 import ParticipantsSidebar from './ParticipantsSidebar.jsx';
 import Dock from './Dock.jsx';
 import { LogOut, AlertTriangle, X as CloseIcon } from 'lucide-react';
@@ -37,6 +39,8 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
   const [hostId, setHostId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [screenSources, setScreenSources] = useState(null);
+  const [showWindowAudioNotice, setShowWindowAudioNotice] = useState(false);
+  const [showDesktopPromo, setShowDesktopPromo] = useState(!isDesktop);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState(null);
   const [streamWarnings, setStreamWarnings] = useState({}); // `${peerId}:${type}` -> { peerId, type }
@@ -213,13 +217,28 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
       return;
     }
 
+    // Desktop: o `useSystemPicker` do Electron só existe no macOS — no
+    // Windows ele nunca aparece, e sem escolha o handler do main process
+    // cai direto pra "primeira fonte" (tela inteira) sem perguntar nada.
+    // Por isso no desktop SEMPRE mostramos nosso próprio picker antes de
+    // chamar getDisplayMedia, em vez de deixar o Electron decidir.
+    if (isDesktop) {
+      try {
+        const sources = await window.gustashare.listScreenSources();
+        if (sources?.length) {
+          setScreenSources(sources);
+          return;
+        }
+      } catch (err) {
+        console.error('Falha ao listar fontes de captura:', err);
+      }
+    }
+
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia(SCREEN_DISPLAY_MEDIA);
       await startShareFromDisplayMedia(stream);
     } catch (err) {
       if (err?.name === 'NotAllowedError' || err?.name === 'AbortError') return;
-      const sources = await window.gustashare?.listScreenSources?.();
-      if (sources?.length) setScreenSources(sources);
     }
   }, [screenOn]);
 
@@ -270,6 +289,13 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
       }
     }
 
+    // Web pura: sem módulo nativo pra cobrir isso, compartilhar uma janela
+    // específica nunca vem com áudio (limitação do Chromium, não nossa) —
+    // avisa e oferece a versão desktop, que resolve isso.
+    if (!isDesktop && settings.displaySurface === 'window' && stream.getAudioTracks().length === 0) {
+      setShowWindowAudioNotice(true);
+    }
+
     videoTrack.addEventListener('ended', () => {
       nativeCaptureRef.current?.stop();
       nativeCaptureRef.current = null;
@@ -302,9 +328,15 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
       }
     }
 
-    window.gustashare.setScreenPickerChoice(choice);
+    // Sem captura nativa, o Chromium rejeita o pedido inteiro se pedirmos
+    // audio:true numa fonte tipo "window" (não sabe entregar áudio isolado
+    // de janela) — falhava calado aqui. Só telas suportam áudio nesse
+    // caminho de fallback.
+    const fallbackChoice = choice.isScreen ? choice : { ...choice, shareAudio: false };
+
+    window.gustashare.setScreenPickerChoice(fallbackChoice);
     try {
-      await clientRef.current.setScreen(true, choice);
+      await clientRef.current.setScreen(true, fallbackChoice);
       setScreenOn(true);
     } catch {
       // usuário cancelou no diálogo nativo, ou a captura falhou
@@ -357,6 +389,7 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
           onCancel={cancelScreenSource}
         />
       )}
+      {showWindowAudioNotice && <WindowAudioNotice onClose={() => setShowWindowAudioNotice(false)} />}
       {leaveOpen && (
         <div className="picker-backdrop" onClick={() => setLeaveOpen(false)}>
           <div className="invite-box leave-box" onClick={(e) => e.stopPropagation()}>
@@ -374,6 +407,7 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
       )}
 
       {isDesktop && <TitleBar />}
+      {showDesktopPromo && <DesktopPromoBanner onClose={() => setShowDesktopPromo(false)} />}
       <div className="topbar">
         <div className="brand">GustaShare</div>
         <button type="button" className="leave-btn" onClick={() => setLeaveOpen(true)}>

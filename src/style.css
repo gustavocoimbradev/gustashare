@@ -783,6 +783,79 @@ input:focus {
   background: rgba(251, 191, 36, 0.15);
 }
 
+/* Banner de topo "baixe o desktop" (só web) */
+
+.desktop-promo-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #fb923c, #f59e0b);
+  color: #2b1503;
+}
+
+.desktop-promo-icon {
+  flex-shrink: 0;
+}
+
+.desktop-promo-text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.desktop-promo-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  background: #2b1503;
+  color: #fff3e0;
+  text-decoration: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.desktop-promo-btn:hover {
+  background: #1c0d02;
+}
+
+.desktop-promo-close {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: #2b1503;
+}
+
+.desktop-promo-close:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 720px) {
+  .desktop-promo-banner {
+    flex-wrap: wrap;
+  }
+
+  .desktop-promo-text {
+    order: 1;
+    flex-basis: 100%;
+  }
+
+  .desktop-promo-btn {
+    order: 2;
+  }
+}
+
 .grid {
   flex: 1;
   display: grid;
