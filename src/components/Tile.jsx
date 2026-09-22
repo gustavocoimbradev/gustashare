@@ -53,6 +53,8 @@ export default function Tile({
   screenStream,
   camStream,
   micStream,
+  stats,
+  pendingMedia,
   focused = false,
   onFocus,
   onStopWatching,
@@ -233,6 +235,33 @@ export default function Tile({
             muted={isSelf || streamSilent}
           />
         ) : null}
+
+        {!mainStream && pendingMedia && (
+          <div className="tile-pending">
+            <span className="tile-pending-spinner" />
+            {pendingMedia === 'screen' ? 'Carregando tela…' : 'Carregando câmera…'}
+          </div>
+        )}
+
+        {stats && (
+          <div
+            className={`tile-net tile-net-q${stats.quality}`}
+            title={`Qualidade da conexão${stats.rttMs != null ? ` · ${stats.rttMs}ms de ping` : ''}${stats.fps != null ? ` · ${stats.fps}fps` : ''}${stats.bitrateKbps != null ? ` · ${stats.bitrateKbps}kbps` : ''}`}
+          >
+            <span className="tile-net-bars">
+              <i />
+              <i />
+              <i />
+            </span>
+            {(stats.rttMs != null || stats.fps != null) && (
+              <span className="tile-net-text">
+                {stats.rttMs != null ? `${stats.rttMs}ms` : ''}
+                {stats.rttMs != null && stats.fps != null ? ' · ' : ''}
+                {stats.fps != null ? `${stats.fps}fps` : ''}
+              </span>
+            )}
+          </div>
+        )}
 
         {showPip && (
           <div className={`pip-cam ${pipReady ? '' : 'is-pending'}`}>

@@ -1056,6 +1056,99 @@ input:focus {
   border-width: 3px;
 }
 
+/* Indicador de conexão (barrinhas + ping/fps) e "carregando tela/câmera" */
+
+.tile-net {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border-radius: var(--radius-full);
+  background: rgba(8, 9, 12, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+}
+
+.tile-net-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 9px;
+}
+
+.tile-net-bars i {
+  display: block;
+  width: 3px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.22);
+  font-style: normal;
+}
+
+.tile-net-bars i:nth-child(1) {
+  height: 4px;
+}
+
+.tile-net-bars i:nth-child(2) {
+  height: 6.5px;
+}
+
+.tile-net-bars i:nth-child(3) {
+  height: 9px;
+}
+
+.tile-net-q1 .tile-net-bars i:nth-child(1) {
+  background: #f0494b;
+}
+
+.tile-net-q2 .tile-net-bars i:nth-child(1),
+.tile-net-q2 .tile-net-bars i:nth-child(2) {
+  background: #fbbf24;
+}
+
+.tile-net-q3 .tile-net-bars i {
+  background: #3ba55d;
+}
+
+.tile-net-text {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tile-pending {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(8, 9, 12, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.tile-pending-spinner {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #9b8cff;
+  border-radius: 50%;
+  animation: connecting-spin 0.7s linear infinite;
+}
+
 .tile-expanded-close {
   position: absolute;
   top: 16px;

@@ -83,10 +83,14 @@ export default class RoomClient extends EventTarget {
     this.memberConns = new Map();
     this.roster = [];
     this.outgoingCalls = new Map();
+    this.incomingCalls = new Map(); // `${peerId}:${type}` -> MediaConnection (mídia que ESTAMOS recebendo)
+    this._statsPrev = new Map(); // `${peerId}:${type}` -> snapshot anterior, pra calcular taxa/perda entre polls
+    this._statsTimer = null;
     this.localStreams = { screen: null, cam: null, mic: null };
     this.stopped = false;
     this._rosterInitialized = false;
     this.cameraPositions = new Map(); // peerId -> 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+    this.mediaState = new Map(); // peerId -> { screen: bool, cam: bool } — "tá compartilhando", chega antes da mídia
     this._lastSeen = new Map();
     this._heartbeatTimer = null;
     this._pageLeaveHandler = null;
@@ -262,6 +266,16 @@ export default class RoomClient extends EventTarget {
           }
         }
         this.emit('camera-positions', Object.fromEntries(this.cameraPositions));
+
+        const incomingMediaState = Object.entries(data.mediaState || {});
+        for (const [peerId, state] of incomingMediaState) {
+          this.mediaState.set(peerId, state);
+        }
+        for (const peerId of this.mediaState.keys()) {
+          if (!rosterIds.has(peerId)) this.mediaState.delete(peerId);
+        }
+        this.emit('media-state', Object.fromEntries(this.mediaState));
+
         this._applyRoster(data.roster);
         const listed = data.roster?.some((m) => m.id === this.peer.id);
         if (listed) finishJoin();
@@ -305,6 +319,7 @@ export default class RoomClient extends EventTarget {
             type: 'roster',
             roster: this.roster,
             cameraPositions: Object.fromEntries(this.cameraPositions),
+            mediaState: Object.fromEntries(this.mediaState),
           });
         }
       });
@@ -345,6 +360,10 @@ export default class RoomClient extends EventTarget {
       this.cameraPositions.set(data.id, data.position);
       this.emit('camera-positions', Object.fromEntries(this.cameraPositions));
       this._broadcastRoster();
+    } else if (data.type === 'media-state') {
+      this.mediaState.set(conn.peer, { screen: !!data.screen, cam: !!data.cam });
+      this.emit('media-state', Object.fromEntries(this.mediaState));
+      this._broadcastRoster();
     }
   }
 
@@ -355,6 +374,7 @@ export default class RoomClient extends EventTarget {
     this.memberConns.delete(peerId);
     this._lastSeen.delete(peerId);
     this.cameraPositions.delete(peerId);
+    this.mediaState.delete(peerId);
     this._closeCallsWith(peerId);
     // Precisa vir ANTES de fechar a conexão: `conn.close()` pode disparar
     // o próprio evento 'close' de volta de forma reentrante (síncrona),
@@ -451,8 +471,9 @@ export default class RoomClient extends EventTarget {
 
   _broadcastRoster() {
     const cameraPositions = Object.fromEntries(this.cameraPositions);
+    const mediaState = Object.fromEntries(this.mediaState);
     for (const conn of this.memberConns.values()) {
-      if (conn.open) conn.send({ type: 'roster', roster: this.roster, cameraPositions });
+      if (conn.open) conn.send({ type: 'roster', roster: this.roster, cameraPositions, mediaState });
     }
     if (this.isPublic) {
       PublicRoomsRegistry.updateParticipantCount(this.roomCode, this.roster.length);
@@ -487,6 +508,20 @@ export default class RoomClient extends EventTarget {
   }
 
   // ----- Posição da câmera (PiP sobre a tela compartilhada) -----
+
+  // ----- "Tá compartilhando" (chega antes da mídia em si) -----
+
+  _sendMediaState(type, on) {
+    const current = this.mediaState.get(this.peer.id) || {};
+    const next = { ...current, [type]: on };
+    this.mediaState.set(this.peer.id, next);
+    if (this.isHost) {
+      this.emit('media-state', Object.fromEntries(this.mediaState));
+      this._broadcastRoster();
+    } else if (this.hostConn && this.hostConn.open) {
+      this.hostConn.send({ type: 'media-state', screen: !!next.screen, cam: !!next.cam });
+    }
+  }
 
   sendCameraPosition(position) {
     this.cameraPositions.set(this.peer.id, position);
@@ -545,11 +580,16 @@ export default class RoomClient extends EventTarget {
 
   _setupCommonPeerHandlers() {
     this.peer.on('call', (call) => {
+      const key = `${call.peer}:${call.metadata?.type}`;
       call.on('stream', (stream) => {
         this.emit('stream', { peerId: call.peer, type: call.metadata?.type, stream });
       });
       call.answer();
+      this.incomingCalls.set(key, call);
+      this._startStatsPolling();
       call.on('close', () => {
+        this.incomingCalls.delete(key);
+        this._statsPrev.delete(key);
         this.emit('stream-removed', { peerId: call.peer, type: call.metadata?.type });
       });
     });
@@ -561,6 +601,98 @@ export default class RoomClient extends EventTarget {
         // ignore
       }
     });
+  }
+
+  // ----- Qualidade de conexão (por stream recebido) -----
+  //
+  // Alimenta o indicador de "barrinhas de sinal" + ping/fps na UI (ver
+  // Tile.jsx). Só olha pra mídia que a GENTE está recebendo de cada
+  // pessoa — é a experiência de quem está assistindo, que é o que faz
+  // sentido mostrar no card dela.
+
+  _startStatsPolling() {
+    if (this._statsTimer) return;
+    this._statsTimer = setInterval(() => this._pollCallStats(), 2500);
+  }
+
+  _stopStatsPolling() {
+    clearInterval(this._statsTimer);
+    this._statsTimer = null;
+    this._statsPrev.clear();
+  }
+
+  async _pollCallStats() {
+    for (const [key, call] of this.incomingCalls) {
+      const pc = call.peerConnection;
+      if (!pc || pc.connectionState === 'closed') continue;
+      try {
+        const report = await pc.getStats();
+        const parsed = this._parseIncomingStats(report, key);
+        if (parsed) {
+          const [peerId, type] = key.split(':');
+          this.emit('call-stats', { peerId, type, stats: parsed });
+        }
+      } catch {
+        // call pode ter fechado bem no meio do getStats()
+      }
+    }
+  }
+
+  _parseIncomingStats(report, key) {
+    let inbound = null;
+    let candidatePair = null;
+    report.forEach((stat) => {
+      if (stat.type === 'inbound-rtp' && !stat.isRemote) {
+        // Prioriza vídeo quando por algum motivo há mais de um inbound-rtp
+        // no mesmo peerConnection — não deveria acontecer (cada call é uma
+        // stream só), mas não custa ser explícito.
+        if (!inbound || stat.kind === 'video') inbound = stat;
+      }
+      if (stat.type === 'candidate-pair' && stat.state === 'succeeded' && (stat.nominated || !candidatePair)) {
+        candidatePair = stat;
+      }
+    });
+    if (!inbound) return null;
+
+    const now = Date.now();
+    const prev = this._statsPrev.get(key);
+    this._statsPrev.set(key, {
+      ts: now,
+      bytesReceived: inbound.bytesReceived || 0,
+      packetsReceived: inbound.packetsReceived || 0,
+      packetsLost: inbound.packetsLost || 0,
+    });
+
+    let bitrateKbps = null;
+    let lossPct = 0;
+    if (prev) {
+      const dt = (now - prev.ts) / 1000;
+      if (dt > 0.2) {
+        const dBytes = (inbound.bytesReceived || 0) - prev.bytesReceived;
+        bitrateKbps = Math.max(0, Math.round(((dBytes * 8) / dt) / 1000));
+        const dReceived = (inbound.packetsReceived || 0) - prev.packetsReceived;
+        const dLost = (inbound.packetsLost || 0) - prev.packetsLost;
+        const dTotal = dReceived + dLost;
+        lossPct = dTotal > 0 ? Math.max(0, (dLost / dTotal) * 100) : 0;
+      }
+    }
+
+    const rttMs = typeof candidatePair?.currentRoundTripTime === 'number'
+      ? Math.round(candidatePair.currentRoundTripTime * 1000)
+      : null;
+    const fps = inbound.kind === 'video' && typeof inbound.framesPerSecond === 'number'
+      ? Math.round(inbound.framesPerSecond)
+      : null;
+
+    // 3 barras (boa) / 2 (mediana) / 1 (ruim) — combina latência e perda de
+    // pacote, os dois sintomas que a pessoa realmente sente (imagem
+    // travando / delay). Sem dado ainda (primeira leitura), assume boa em
+    // vez de alarmar à toa.
+    let quality = 3;
+    if ((rttMs != null && rttMs > 300) || lossPct > 5) quality = 1;
+    else if ((rttMs != null && rttMs > 150) || lossPct > 1.5) quality = 2;
+
+    return { rttMs, fps, bitrateKbps, lossPct: Math.round(lossPct * 10) / 10, quality };
   }
 
   // Reempurra nossas streams ativas (tela/cam/mic) pra todo mundo que já
@@ -872,6 +1004,12 @@ export default class RoomClient extends EventTarget {
     this.localStreams[type] = stream;
     this.emit('self-stream', { type, stream });
 
+    // Avisa a sala rápido, antes da mídia em si — a call P2P (principalmente
+    // tela, que pode passar por TURN) demora bem mais que essa mensagem de
+    // texto pra host+demais. Sem isso, quem acabou de entrar via a pessoa
+    // como se não estivesse compartilhando nada por vários segundos.
+    if (type === 'screen' || type === 'cam') this._sendMediaState(type, !!stream);
+
     for (const m of this.roster) {
       if (m.id === this.peer.id) continue;
       const key = `${m.id}:${type}`;
@@ -909,6 +1047,7 @@ export default class RoomClient extends EventTarget {
     this.stopped = true;
     this._unbindPageLeave();
     this._stopHeartbeat();
+    this._stopStatsPolling();
     clearTimeout(this._hostWaitTimer);
     if (this.isPublic) {
       PublicRoomsRegistry.remove(this.roomCode);

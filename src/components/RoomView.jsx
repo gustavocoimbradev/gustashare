@@ -44,6 +44,8 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState(null);
   const [streamWarnings, setStreamWarnings] = useState({}); // `${peerId}:${type}` -> { peerId, type }
+  const [callStats, setCallStats] = useState({}); // peerId -> { screen?: stats, cam?: stats }
+  const [mediaState, setMediaState] = useState({}); // peerId -> { screen?: bool, cam?: bool }
   const [focusedId, setFocusedId] = useState(null);
   const nativeCaptureRef = useRef(null);
 
@@ -103,6 +105,18 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
         }
         return next;
       });
+      setCallStats((prev) => {
+        if (!(peerId in prev)) return prev;
+        const next = { ...prev };
+        delete next[peerId];
+        return next;
+      });
+      setMediaState((prev) => {
+        if (!(peerId in prev)) return prev;
+        const next = { ...prev };
+        delete next[peerId];
+        return next;
+      });
       if (!peerId || peerId === client.peer?.id) return;
       setMessages((prev) => [
         ...prev,
@@ -130,6 +144,15 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
       const { peerId, type } = e.detail;
       setStreamWarnings((prev) => ({ ...prev, [`${peerId}:${type}`]: { peerId, type } }));
     };
+    const onCallStats = (e) => {
+      const { peerId, type, stats } = e.detail;
+      setCallStats((prev) => ({ ...prev, [peerId]: { ...prev[peerId], [type]: stats } }));
+    };
+    // Sinal leve de "tá compartilhando" — chega antes da mídia (que pode
+    // levar vários segundos, sobretudo tela via TURN). Sem isso, quem
+    // entra/dá F5 vê a sala vazia por um tempo mesmo com gente já
+    // compartilhando algo.
+    const onMediaState = (e) => setMediaState(e.detail);
     const onStreamRecovered = (e) => {
       const { peerId, type } = e.detail;
       setStreamWarnings((prev) => {
@@ -150,6 +173,8 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
     client.addEventListener('chat', onChat);
     client.addEventListener('stream-failed', onStreamFailed);
     client.addEventListener('stream-recovered', onStreamRecovered);
+    client.addEventListener('call-stats', onCallStats);
+    client.addEventListener('media-state', onMediaState);
 
     const onPublicToggle = (e) => setIsPublic(e.detail);
     client.addEventListener('public-toggle', onPublicToggle);
@@ -183,6 +208,8 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
       client.removeEventListener('chat', onChat);
       client.removeEventListener('stream-failed', onStreamFailed);
       client.removeEventListener('stream-recovered', onStreamRecovered);
+      client.removeEventListener('call-stats', onCallStats);
+      client.removeEventListener('media-state', onMediaState);
       client.removeEventListener('public-toggle', onPublicToggle);
       client.removeEventListener('host-info', onHostInfo);
       client.removeEventListener('room-ready', onRoomReady);
@@ -369,6 +396,27 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
     setScreenSources(null);
   }
 
+  // Stats de conexão (barrinhas + ping/fps) só fazem sentido pro que a
+  // gente tá de fato assistindo de alguém — pega o do tipo (tela ou cam)
+  // que é a mainStream exibida naquele card.
+  function statsForMember(memberId, isSelf, s) {
+    if (isSelf) return null;
+    if (s.screen) return callStats[memberId]?.screen || null;
+    if (s.cam) return callStats[memberId]?.cam || null;
+    return null;
+  }
+
+  // "Carregando tela/câmera" — a pessoa já avisou que ligou, mas a mídia
+  // (bem mais pesada, principalmente tela) ainda não chegou.
+  function pendingMediaForMember(memberId, isSelf, s) {
+    if (isSelf) return null;
+    const state = mediaState[memberId];
+    if (!state) return null;
+    if (state.screen && !s.screen) return 'screen';
+    if (state.cam && !s.cam) return 'cam';
+    return null;
+  }
+
   function togglePublic() {
     clientRef.current.setPublic(!isPublic);
   }
@@ -519,6 +567,8 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
                         screenStream={s.screen}
                         camStream={s.cam}
                         micStream={s.mic}
+                        stats={statsForMember(m.id, isSelf, s)}
+                        pendingMedia={pendingMediaForMember(m.id, isSelf, s)}
                         focused
                         onStopWatching={() => setFocusedId(null)}
                       />
@@ -542,6 +592,8 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
                         screenStream={s.screen}
                         camStream={s.cam}
                         micStream={s.mic}
+                        stats={statsForMember(m.id, isSelf, s)}
+                        pendingMedia={pendingMediaForMember(m.id, isSelf, s)}
                         onFocus={() => setFocusedId(m.id)}
                       />
                     );
@@ -564,6 +616,8 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
                     screenStream={s.screen}
                     camStream={s.cam}
                     micStream={s.mic}
+                    stats={statsForMember(m.id, isSelf, s)}
+                    pendingMedia={pendingMediaForMember(m.id, isSelf, s)}
                     onFocus={() => setFocusedId(m.id)}
                   />
                 );
