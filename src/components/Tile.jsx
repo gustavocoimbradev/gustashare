@@ -152,7 +152,12 @@ export default function Tile({
   useEffect(() => {
     if (!expanded) return undefined;
     function onKey(e) {
-      if (e.key === 'Escape') setExpanded(false);
+      if (e.key !== 'Escape') return;
+      // Esc na tela expandida sai de vez (como o botão "Parar de assistir"),
+      // não só volta pro modo spotlight — senão o usuário precisa de dois
+      // gestos diferentes (Esc + clique) pra sair da tela de alguém.
+      exitExpanded();
+      onStopWatching?.();
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
