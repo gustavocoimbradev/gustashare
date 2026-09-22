@@ -364,6 +364,9 @@ export default class RoomClient extends EventTarget {
       this.mediaState.set(conn.peer, { screen: !!data.screen, cam: !!data.cam });
       this.emit('media-state', Object.fromEntries(this.mediaState));
       this._broadcastRoster();
+    } else if (data.type === 'draw-point' || data.type === 'draw-end') {
+      this.emit(data.type, data);
+      this._broadcastChat(data, conn);
     }
   }
 
@@ -507,8 +510,6 @@ export default class RoomClient extends EventTarget {
     }
   }
 
-  // ----- Posição da câmera (PiP sobre a tela compartilhada) -----
-
   // ----- "Tá compartilhando" (chega antes da mídia em si) -----
 
   _sendMediaState(type, on) {
@@ -523,6 +524,8 @@ export default class RoomClient extends EventTarget {
     }
   }
 
+  // ----- Posição da câmera (PiP sobre a tela compartilhada) -----
+
   sendCameraPosition(position) {
     this.cameraPositions.set(this.peer.id, position);
     this.emit('camera-positions', Object.fromEntries(this.cameraPositions));
@@ -530,6 +533,34 @@ export default class RoomClient extends EventTarget {
       this._broadcastRoster();
     } else if (this.hostConn && this.hostConn.open) {
       this.hostConn.send({ type: 'camera-position', id: this.peer.id, position });
+    }
+  }
+
+  // ----- Traço "olha isso aqui" (desenho efêmero sobre tela/câmera) -----
+  //
+  // Broadcast leve pro resto da sala (mesmo caminho do chat): quem desenha
+  // manda ponto a ponto, com throttle no lado do Tile.jsx (não aqui) —
+  // aqui só emite local (feedback instantâneo pra quem desenhou) e relay
+  // via host. O desenho em si (posição, fade, animação) é 100% client-side
+  // no Tile — aqui só transporta `{targetId, mediaType, strokeId, x, y}`.
+
+  sendDrawPoint(payload) {
+    const msg = { type: 'draw-point', authorId: this.peer.id, ...payload };
+    this.emit('draw-point', msg);
+    if (this.isHost) {
+      this._broadcastChat(msg);
+    } else if (this.hostConn && this.hostConn.open) {
+      this.hostConn.send(msg);
+    }
+  }
+
+  sendDrawEnd(payload) {
+    const msg = { type: 'draw-end', authorId: this.peer.id, ...payload };
+    this.emit('draw-end', msg);
+    if (this.isHost) {
+      this._broadcastChat(msg);
+    } else if (this.hostConn && this.hostConn.open) {
+      this.hostConn.send(msg);
     }
   }
 

@@ -7,7 +7,7 @@ import ClientBadge from './ClientBadge.jsx';
 import HostBadge from './HostBadge.jsx';
 import MicBadge from './MicBadge.jsx';
 
-const NET_QUALITY_LABEL = { 1: 'Conexão fraca', 2: 'Conexão média', 3: 'Conexão boa' };
+const NET_QUALITY_LABEL = { 1: 'Internet fraca', 2: 'Internet mediana', 3: 'Internet boa' };
 
 // Rotulado explicitamente (Ping/Buffer/FPS) em vez de só números soltos —
 // bitrate e perda entram só quando disponíveis/relevantes, sem label fixo
@@ -21,6 +21,47 @@ function formatNetStats(stats) {
   if (stats.bitrateKbps != null) parts.push(`${stats.bitrateKbps}kbps`);
   if (stats.lossPct) parts.push(`${stats.lossPct}% perda`);
   return parts.join(' · ');
+}
+
+// ----- Traço "olha isso aqui" (desenho efêmero sobre tela/câmera) -----
+//
+// Cada ponto guarda o instante em que foi desenhado; no loop de render a
+// gente descarta os mais antigos (os primeiros do traço) assim que
+// passam de DRAW_FADE_MS — como são sempre os do INÍCIO que vencem
+// primeiro, o traço "recua" visualmente a partir da ponta onde a pessoa
+// começou a desenhar, sumindo suavemente até não sobrar nada. Isso já
+// cobre o "parou no meio e ainda tem que sumir" de graça: sem novos
+// pontos chegando, todos os pontos existentes acabam vencendo um a um.
+const DRAW_FADE_MS = 1100;
+const DRAW_SEND_INTERVAL_MS = 35; // throttle de rede — o desenho local não é throttled
+const DRAW_COLOR = '#8f7dff';
+const DRAW_GLOW_COLOR = '#5a86ff';
+
+// `object-fit: contain` deixa a área realmente ocupada pelo vídeo menor
+// que a caixa do elemento quando a proporção não bate (comum em captura
+// de tela) — sem isso o traço ficaria deslocado/esticado. `originRect`
+// opcional subtrai um offset (pra converter de coordenada de viewport pra
+// coordenada relativa ao stage, usado só no desenho no canvas).
+function computeContentRect(video, originRect) {
+  const videoRect = video.getBoundingClientRect();
+  const boxW = videoRect.width;
+  const boxH = videoRect.height;
+  const ox = originRect ? originRect.left : 0;
+  const oy = originRect ? originRect.top : 0;
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  if (!vw || !vh || !boxW || !boxH) {
+    return { left: videoRect.left - ox, top: videoRect.top - oy, width: boxW, height: boxH };
+  }
+  const scale = Math.min(boxW / vw, boxH / vh);
+  const w = vw * scale;
+  const h = vh * scale;
+  return {
+    left: videoRect.left - ox + (boxW - w) / 2,
+    top: videoRect.top - oy + (boxH - h) / 2,
+    width: w,
+    height: h,
+  };
 }
 
 function VolumeControl({ label, volume, silent, open, onToggleOpen, onChange, compact }) {
@@ -71,6 +112,7 @@ export default function Tile({
   micStream,
   stats,
   pendingMedia,
+  client,
   focused = false,
   onFocus,
   onStopWatching,
@@ -79,6 +121,14 @@ export default function Tile({
   const pipRef = useRef(null);
   const audioRef = useRef(null);
   const stageRef = useRef(null);
+  const drawCanvasRef = useRef(null);
+  const strokesRef = useRef(new Map()); // `${authorId}:${strokeId}` -> { points: [{x,y,t}] }
+  const drawRafRef = useRef(null);
+  const pointerStartRef = useRef(null); // {x,y} em coords de cliente, pra distinguir clique de arraste
+  const draggingRef = useRef(false);
+  const justDraggedRef = useRef(false); // suprime o onClick de foco logo depois de um arraste
+  const strokeIdRef = useRef(null);
+  const lastDrawSentRef = useRef(0);
   const [micVolume, setMicVolume] = useState(1);
   const [micMuted, setMicMuted] = useState(false);
   const [streamVolume, setStreamVolume] = useState(1);
@@ -92,6 +142,7 @@ export default function Tile({
   const speaking = useSpeaking(micStream);
 
   const mainStream = screenStream || camStream;
+  const activeMediaType = screenStream ? 'screen' : camStream ? 'cam' : null;
   const showPip = !!screenStream && !!camStream;
   const micSilent = micMuted || micVolume === 0;
   // Volume da transmissão é independente do mic: só toca quando o card está
@@ -181,6 +232,195 @@ export default function Tile({
     return () => window.removeEventListener('keydown', onKey);
   }, [expanded]);
 
+  // Traços de OUTRAS pessoas desenhando nessa mesma tela/câmera — os
+  // nossos próprios já entram direto em `strokesRef` na hora do gesto
+  // (ver `appendLocalDrawPoint`), sem esperar o eco da rede.
+  useEffect(() => {
+    if (!client || !userId || !activeMediaType) return undefined;
+    function onDrawPoint(e) {
+      const msg = e.detail;
+      if (!msg || msg.authorId === client.peer?.id) return;
+      if (msg.targetId !== userId || msg.mediaType !== activeMediaType) return;
+      const key = `${msg.authorId}:${msg.strokeId}`;
+      let stroke = strokesRef.current.get(key);
+      if (!stroke) {
+        stroke = { points: [] };
+        strokesRef.current.set(key, stroke);
+      }
+      stroke.points.push({ x: msg.x, y: msg.y, t: performance.now() });
+      ensureDrawLoop();
+    }
+    client.addEventListener('draw-point', onDrawPoint);
+    return () => client.removeEventListener('draw-point', onDrawPoint);
+  }, [client, userId, activeMediaType]);
+
+  function ensureDrawLoop() {
+    if (drawRafRef.current) return;
+    const loop = () => {
+      const hasActive = renderDrawFrame();
+      drawRafRef.current = hasActive ? requestAnimationFrame(loop) : null;
+    };
+    drawRafRef.current = requestAnimationFrame(loop);
+  }
+
+  function renderDrawFrame() {
+    const canvas = drawCanvasRef.current;
+    const stage = stageRef.current;
+    const video = videoRef.current;
+    if (!canvas || !stage || !video || !mainStream) {
+      strokesRef.current.clear();
+      return false;
+    }
+
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = stage.clientWidth;
+    const cssH = stage.clientHeight;
+    const pxW = Math.max(1, Math.round(cssW * dpr));
+    const pxH = Math.max(1, Math.round(cssH * dpr));
+    if (canvas.width !== pxW || canvas.height !== pxH) {
+      canvas.width = pxW;
+      canvas.height = pxH;
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    const now = performance.now();
+    const stageRect = stage.getBoundingClientRect();
+    const contentRect = computeContentRect(video, stageRect);
+    let hasActive = false;
+
+    for (const [key, stroke] of strokesRef.current) {
+      // Os pontos mais antigos (início do traço) vencem primeiro — é isso
+      // que dá o efeito de "recuar a partir da ponta oposta".
+      while (stroke.points.length && now - stroke.points[0].t > DRAW_FADE_MS) {
+        stroke.points.shift();
+      }
+      if (!stroke.points.length) {
+        strokesRef.current.delete(key);
+        continue;
+      }
+      hasActive = true;
+      drawStrokeOnCanvas(ctx, stroke.points, contentRect, now);
+    }
+
+    return hasActive;
+  }
+
+  function drawStrokeOnCanvas(ctx, points, rect, now) {
+    if (points.length === 1) {
+      const p = points[0];
+      const alpha = Math.max(0, 1 - (now - p.t) / DRAW_FADE_MS);
+      if (alpha <= 0) return;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = DRAW_COLOR;
+      ctx.shadowColor = DRAW_GLOW_COLOR;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(rect.left + p.x * rect.width, rect.top + p.y * rect.height, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (let i = 1; i < points.length; i += 1) {
+      const a = points[i - 1];
+      const b = points[i];
+      const alpha = Math.max(0, 1 - (now - b.t) / DRAW_FADE_MS);
+      if (alpha <= 0) continue;
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = 2 + alpha * 3;
+      ctx.strokeStyle = DRAW_COLOR;
+      ctx.shadowColor = DRAW_GLOW_COLOR;
+      ctx.shadowBlur = 10 * alpha;
+      ctx.beginPath();
+      ctx.moveTo(rect.left + a.x * rect.width, rect.top + a.y * rect.height);
+      ctx.lineTo(rect.left + b.x * rect.width, rect.top + b.y * rect.height);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function appendLocalDrawPoint(clientX, clientY) {
+    const video = videoRef.current;
+    if (!video || !client || !userId || !activeMediaType) return;
+    const rect = computeContentRect(video);
+    if (!rect.width || !rect.height) return;
+    const x = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    const y = Math.min(1, Math.max(0, (clientY - rect.top) / rect.height));
+
+    const key = `${client.peer.id}:${strokeIdRef.current}`;
+    let stroke = strokesRef.current.get(key);
+    if (!stroke) {
+      stroke = { points: [] };
+      strokesRef.current.set(key, stroke);
+    }
+    stroke.points.push({ x, y, t: performance.now() });
+    ensureDrawLoop();
+
+    // Rede: throttled — o desenho local acima já roda em frequência cheia,
+    // isso aqui só controla quanto os OUTROS espectadores recebem.
+    const now = Date.now();
+    if (now - lastDrawSentRef.current >= DRAW_SEND_INTERVAL_MS) {
+      lastDrawSentRef.current = now;
+      client.sendDrawPoint({ targetId: userId, mediaType: activeMediaType, strokeId: strokeIdRef.current, x, y });
+    }
+  }
+
+  function onStagePointerDown(e) {
+    if (!mainStream || e.button !== 0 || !client) return;
+    pointerStartRef.current = { x: e.clientX, y: e.clientY };
+    draggingRef.current = false;
+  }
+
+  function onStagePointerMove(e) {
+    if (!pointerStartRef.current) return;
+    const dx = e.clientX - pointerStartRef.current.x;
+    const dy = e.clientY - pointerStartRef.current.y;
+    if (!draggingRef.current) {
+      // Margem antes de considerar "arrastou" — clique simples (foco do
+      // card) não pode virar um risquinho sem querer.
+      if (Math.hypot(dx, dy) < 4) return;
+      draggingRef.current = true;
+      strokeIdRef.current = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+      try {
+        e.target.setPointerCapture?.(e.pointerId);
+      } catch {
+        // ignore
+      }
+    }
+    appendLocalDrawPoint(e.clientX, e.clientY);
+  }
+
+  function endStrokeIfDragging(e) {
+    if (!draggingRef.current) {
+      pointerStartRef.current = null;
+      return;
+    }
+    if (client && userId && activeMediaType && strokeIdRef.current) {
+      client.sendDrawEnd({ targetId: userId, mediaType: activeMediaType, strokeId: strokeIdRef.current });
+    }
+    try {
+      e?.target?.releasePointerCapture?.(e.pointerId);
+    } catch {
+      // ignore
+    }
+    strokeIdRef.current = null;
+    pointerStartRef.current = null;
+    draggingRef.current = false;
+    justDraggedRef.current = true;
+  }
+
+  useEffect(() => {
+    return () => {
+      if (drawRafRef.current) cancelAnimationFrame(drawRafRef.current);
+    };
+  }, []);
+
   async function goFullscreen() {
     const el = stageRef.current;
     if (!el) return;
@@ -200,6 +440,10 @@ export default function Tile({
   }
 
   function handleStageClick() {
+    if (justDraggedRef.current) {
+      justDraggedRef.current = false;
+      return;
+    }
     if (!mainStream || focused) return;
     onFocus?.();
   }
@@ -242,6 +486,11 @@ export default function Tile({
         ref={stageRef}
         className={`tile-stage ${expanded ? 'expanded' : ''} ${mainStream && !focused ? 'watchable' : ''}`}
         onClick={handleStageClick}
+        onPointerDown={onStagePointerDown}
+        onPointerMove={onStagePointerMove}
+        onPointerUp={endStrokeIfDragging}
+        onPointerLeave={endStrokeIfDragging}
+        onPointerCancel={endStrokeIfDragging}
       >
         <div className="avatar">{nickname.slice(0, 2).toUpperCase()}</div>
         {mainStream ? (
@@ -253,6 +502,12 @@ export default function Tile({
             muted={isSelf || streamSilent}
           />
         ) : null}
+
+        {/* "Olha isso aqui" — traço efêmero que qualquer um pode desenhar
+            arrastando o mouse/dedo sobre a tela/câmera compartilhada.
+            `pointer-events: none`: a captura do gesto é no .tile-stage,
+            o canvas é só o desenho por cima. */}
+        {mainStream && <canvas ref={drawCanvasRef} className="tile-draw-canvas" />}
 
         {/* Enquanto a mídia não chega (sinalizada mas call ainda não conectou)
             OU já conectou mas o primeiro frame ainda não decodificou — cobre
@@ -276,16 +531,18 @@ export default function Tile({
         )}
 
         {stats && (
-          <Tooltip label={NET_QUALITY_LABEL[stats.quality] || 'Conexão'}>
-            <span
-              className={`tile-net-badge tile-net-q${stats.quality}`}
-              aria-label={NET_QUALITY_LABEL[stats.quality] || 'Conexão'}
-            >
-              <i />
-              <i />
-              <i />
-            </span>
-          </Tooltip>
+          <div className="tile-net-badge-wrap">
+            <Tooltip label={NET_QUALITY_LABEL[stats.quality] || 'Internet'}>
+              <span
+                className={`tile-net-badge tile-net-q${stats.quality}`}
+                aria-label={NET_QUALITY_LABEL[stats.quality] || 'Internet'}
+              >
+                <i />
+                <i />
+                <i />
+              </span>
+            </Tooltip>
+          </div>
         )}
 
         {showPip && (

@@ -579,6 +579,7 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
                         micStream={s.mic}
                         stats={statsForMember(m.id, isSelf, s)}
                         pendingMedia={pendingMediaForMember(m.id, isSelf, s)}
+                        client={clientRef.current}
                         focused
                         onStopWatching={() => setFocusedId(null)}
                       />
@@ -604,6 +605,7 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
                         micStream={s.mic}
                         stats={statsForMember(m.id, isSelf, s)}
                         pendingMedia={pendingMediaForMember(m.id, isSelf, s)}
+                        client={clientRef.current}
                         onFocus={() => setFocusedId(m.id)}
                       />
                     );
@@ -628,6 +630,7 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
                     micStream={s.mic}
                     stats={statsForMember(m.id, isSelf, s)}
                     pendingMedia={pendingMediaForMember(m.id, isSelf, s)}
+                    client={clientRef.current}
                     onFocus={() => setFocusedId(m.id)}
                   />
                 );
