@@ -146,7 +146,17 @@ export default function RoomView({ nickname, roomCode, onLeave, onSwitchRoom }) 
     };
     const onCallStats = (e) => {
       const { peerId, type, stats } = e.detail;
-      setCallStats((prev) => ({ ...prev, [peerId]: { ...prev[peerId], [type]: stats } }));
+      // Mescla em vez de substituir: um poll pode vir com algum campo null
+      // por instabilidade momentânea da rede (não por falta de dado real)
+      // — sem isso, o número aparecia e sumia do nada na UI.
+      setCallStats((prev) => {
+        const prevForPeer = prev[peerId] || {};
+        const merged = { ...(prevForPeer[type] || {}) };
+        for (const [k, v] of Object.entries(stats)) {
+          if (v != null) merged[k] = v;
+        }
+        return { ...prev, [peerId]: { ...prevForPeer, [type]: merged } };
+      });
     };
     // Sinal leve de "tá compartilhando" — chega antes da mídia (que pode
     // levar vários segundos, sobretudo tela via TURN). Sem isso, quem

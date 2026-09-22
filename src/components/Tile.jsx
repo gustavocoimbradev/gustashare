@@ -245,21 +245,16 @@ export default function Tile({
 
         {stats && (
           <div
-            className={`tile-net tile-net-q${stats.quality}`}
-            title={`Qualidade da conexão${stats.rttMs != null ? ` · ${stats.rttMs}ms de ping` : ''}${stats.fps != null ? ` · ${stats.fps}fps` : ''}${stats.bitrateKbps != null ? ` · ${stats.bitrateKbps}kbps` : ''}`}
+            className="tile-net"
+            title={`Ping ${stats.rttMs != null ? `${stats.rttMs}ms` : '—'} · FPS ${stats.fps != null ? stats.fps : '—'} · Buffer ${stats.bufferMs != null ? `${stats.bufferMs}ms` : '—'}${stats.bitrateKbps != null ? ` · ${stats.bitrateKbps}kbps` : ''}${stats.lossPct ? ` · ${stats.lossPct}% de perda` : ''}`}
           >
-            <span className="tile-net-bars">
-              <i />
-              <i />
-              <i />
+            <span className="tile-net-text">
+              {stats.rttMs != null ? `${stats.rttMs}ms` : '—ms'}
+              {' · '}
+              {stats.fps != null ? `${stats.fps}fps` : '—fps'}
+              {' · '}
+              buffer {stats.bufferMs != null ? `${stats.bufferMs}ms` : '—'}
             </span>
-            {(stats.rttMs != null || stats.fps != null) && (
-              <span className="tile-net-text">
-                {stats.rttMs != null ? `${stats.rttMs}ms` : ''}
-                {stats.rttMs != null && stats.fps != null ? ' · ' : ''}
-                {stats.fps != null ? `${stats.fps}fps` : ''}
-              </span>
-            )}
           </div>
         )}
 
@@ -288,6 +283,13 @@ export default function Tile({
         {isHost && <HostBadge />}
         <ClientBadge platform={platform} />
         <MicBadge on={Boolean(micStream)} />
+        {stats && (
+          <span className={`tile-net-badge tile-net-q${stats.quality}`} title="Qualidade da conexão">
+            <i />
+            <i />
+            <i />
+          </span>
+        )}
       </div>
 
       {!isSelf && micSilent && !hover && (

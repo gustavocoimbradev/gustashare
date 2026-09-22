@@ -640,7 +640,8 @@ export default class RoomClient extends EventTarget {
 
   _parseIncomingStats(report, key) {
     let inbound = null;
-    let candidatePair = null;
+    let transport = null;
+    let fallbackPair = null;
     report.forEach((stat) => {
       if (stat.type === 'inbound-rtp' && !stat.isRemote) {
         // Prioriza vídeo quando por algum motivo há mais de um inbound-rtp
@@ -648,11 +649,18 @@ export default class RoomClient extends EventTarget {
         // stream só), mas não custa ser explícito.
         if (!inbound || stat.kind === 'video') inbound = stat;
       }
-      if (stat.type === 'candidate-pair' && stat.state === 'succeeded' && (stat.nominated || !candidatePair)) {
-        candidatePair = stat;
+      if (stat.type === 'transport') transport = stat;
+      if (stat.type === 'candidate-pair' && stat.state === 'succeeded' && (stat.nominated || !fallbackPair)) {
+        fallbackPair = stat;
       }
     });
     if (!inbound) return null;
+
+    // O par "oficial" é o que o transport aponta (`selectedCandidatePairId`)
+    // — adivinhar por nominated/succeeded (como antes) varia entre browsers
+    // e deixava o RTT sumindo do nada em boa parte dos polls.
+    const candidatePair =
+      (transport?.selectedCandidatePairId && report.get(transport.selectedCandidatePairId)) || fallbackPair;
 
     const now = Date.now();
     const prev = this._statsPrev.get(key);
@@ -661,10 +669,13 @@ export default class RoomClient extends EventTarget {
       bytesReceived: inbound.bytesReceived || 0,
       packetsReceived: inbound.packetsReceived || 0,
       packetsLost: inbound.packetsLost || 0,
+      jitterBufferDelay: inbound.jitterBufferDelay || 0,
+      jitterBufferEmittedCount: inbound.jitterBufferEmittedCount || 0,
     });
 
     let bitrateKbps = null;
     let lossPct = 0;
+    let bufferMs = null;
     if (prev) {
       const dt = (now - prev.ts) / 1000;
       if (dt > 0.2) {
@@ -674,7 +685,19 @@ export default class RoomClient extends EventTarget {
         const dLost = (inbound.packetsLost || 0) - prev.packetsLost;
         const dTotal = dReceived + dLost;
         lossPct = dTotal > 0 ? Math.max(0, (dLost / dTotal) * 100) : 0;
+
+        // Buffer médio de jitter no intervalo (ms de atraso adicionado pra
+        // suavizar a rede, por frame entregue) — mais preciso que o valor
+        // acumulado desde o início da call.
+        const dJbDelay = (inbound.jitterBufferDelay || 0) - prev.jitterBufferDelay;
+        const dJbCount = (inbound.jitterBufferEmittedCount || 0) - prev.jitterBufferEmittedCount;
+        if (dJbCount > 0) bufferMs = Math.round((dJbDelay / dJbCount) * 1000);
       }
+    }
+    // Sem jitterBufferDelay/EmittedCount ainda (primeiro poll, ou browser
+    // sem suporte) — usa o jitter instantâneo como aproximação.
+    if (bufferMs == null && typeof inbound.jitter === 'number') {
+      bufferMs = Math.round(inbound.jitter * 1000);
     }
 
     const rttMs = typeof candidatePair?.currentRoundTripTime === 'number'
@@ -692,7 +715,7 @@ export default class RoomClient extends EventTarget {
     if ((rttMs != null && rttMs > 300) || lossPct > 5) quality = 1;
     else if ((rttMs != null && rttMs > 150) || lossPct > 1.5) quality = 2;
 
-    return { rttMs, fps, bitrateKbps, lossPct: Math.round(lossPct * 10) / 10, quality };
+    return { rttMs, fps, bitrateKbps, bufferMs, lossPct: Math.round(lossPct * 10) / 10, quality };
   }
 
   // Reempurra nossas streams ativas (tela/cam/mic) pra todo mundo que já

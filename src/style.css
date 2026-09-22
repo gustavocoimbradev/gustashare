@@ -1056,16 +1056,13 @@ input:focus {
   border-width: 3px;
 }
 
-/* Indicador de conexão (barrinhas + ping/fps) e "carregando tela/câmera" */
+/* Estatísticas de rede (texto, topo-esquerdo) e "carregando tela/câmera" */
 
 .tile-net {
   position: absolute;
   top: 8px;
-  right: 8px;
+  left: 8px;
   z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 5px;
   padding: 3px 7px;
   border-radius: var(--radius-full);
   background: rgba(8, 9, 12, 0.55);
@@ -1075,50 +1072,58 @@ input:focus {
   pointer-events: none;
 }
 
-.tile-net-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 1.5px;
-  height: 9px;
-}
-
-.tile-net-bars i {
-  display: block;
-  width: 3px;
-  border-radius: 1px;
-  background: rgba(255, 255, 255, 0.22);
-  font-style: normal;
-}
-
-.tile-net-bars i:nth-child(1) {
-  height: 4px;
-}
-
-.tile-net-bars i:nth-child(2) {
-  height: 6.5px;
-}
-
-.tile-net-bars i:nth-child(3) {
-  height: 9px;
-}
-
-.tile-net-q1 .tile-net-bars i:nth-child(1) {
-  background: #f0494b;
-}
-
-.tile-net-q2 .tile-net-bars i:nth-child(1),
-.tile-net-q2 .tile-net-bars i:nth-child(2) {
-  background: #fbbf24;
-}
-
-.tile-net-q3 .tile-net-bars i {
-  background: #3ba55d;
-}
-
 .tile-net-text {
   font-size: 10px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* Barrinhas de sinal (só visual, sem número) — ao lado do nome, junto dos
+   outros badges (host/cliente/mic). */
+
+.tile-net-badge {
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1.5px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tile-net-badge i {
+  display: block;
+  width: 3px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.25);
+  font-style: normal;
+}
+
+.tile-net-badge i:nth-child(1) {
+  height: 5px;
+}
+
+.tile-net-badge i:nth-child(2) {
+  height: 8px;
+}
+
+.tile-net-badge i:nth-child(3) {
+  height: 11px;
+}
+
+.tile-net-badge.tile-net-q1 i:nth-child(1) {
+  background: #f0494b;
+}
+
+.tile-net-badge.tile-net-q2 i:nth-child(1),
+.tile-net-badge.tile-net-q2 i:nth-child(2) {
+  background: #fbbf24;
+}
+
+.tile-net-badge.tile-net-q3 i {
+  background: #3ba55d;
 }
 
 .tile-pending {
