@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Maximize2, MonitorX, Volume1, Volume2, VolumeX, X } from 'lucide-react';
 import useSpeaking from '../lib/useSpeaking.js';
-import { userColorStyle } from '../lib/userColor.js';
+import { userColor, userColorStyle } from '../lib/userColor.js';
 import Tooltip from './Tooltip.jsx';
 import ClientBadge from './ClientBadge.jsx';
 import HostBadge from './HostBadge.jsx';
@@ -34,8 +34,10 @@ function formatNetStats(stats) {
 // pontos chegando, todos os pontos existentes acabam vencendo um a um.
 const DRAW_FADE_MS = 1100;
 const DRAW_SEND_INTERVAL_MS = 35; // throttle de rede — o desenho local não é throttled
-const DRAW_COLOR = '#8f7dff';
-const DRAW_GLOW_COLOR = '#5a86ff';
+// Sutil de propósito: é só um "olha isso aqui", não pode competir com o
+// conteúdo da tela por baixo. Cor por autor (não fixa) — cada um assina
+// o próprio traço com a mesma cor do seu avatar.
+const DRAW_MAX_ALPHA = 0.65;
 
 // `object-fit: contain` deixa a área realmente ocupada pelo vídeo menor
 // que a caixa do elemento quando a proporção não bate (comum em captura
@@ -129,6 +131,7 @@ export default function Tile({
   const justDraggedRef = useRef(false); // suprime o onClick de foco logo depois de um arraste
   const strokeIdRef = useRef(null);
   const lastDrawSentRef = useRef(0);
+  const stopWatchOnExitRef = useRef(false); // Esc em fullscreen real: espera o fullscreenchange confirmar antes de desmontar
   const [micVolume, setMicVolume] = useState(1);
   const [micMuted, setMicMuted] = useState(false);
   const [streamVolume, setStreamVolume] = useState(1);
@@ -208,7 +211,17 @@ export default function Tile({
     function onFullscreenChange() {
       const node = document.fullscreenElement || document.webkitFullscreenElement;
       if (node && node !== stageRef.current) setExpanded(false);
-      if (!node && expanded) setExpanded(false);
+      if (!node) {
+        if (expanded) setExpanded(false);
+        // Só desmonta o card (via onStopWatching) DEPOIS que o navegador
+        // confirmou que saiu do fullscreen de verdade — chamar isso antes
+        // (no mesmo tick do Esc) removia o elemento do DOM no meio da
+        // transição e prendia a tela em fullscreen visualmente.
+        if (stopWatchOnExitRef.current) {
+          stopWatchOnExitRef.current = false;
+          onStopWatching?.();
+        }
+      }
     }
     document.addEventListener('fullscreenchange', onFullscreenChange);
     document.addEventListener('webkitfullscreenchange', onFullscreenChange);
@@ -225,8 +238,15 @@ export default function Tile({
       // Esc na tela expandida sai de vez (como o botão "Parar de assistir"),
       // não só volta pro modo spotlight — senão o usuário precisa de dois
       // gestos diferentes (Esc + clique) pra sair da tela de alguém.
-      exitExpanded();
-      onStopWatching?.();
+      const inRealFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      if (inRealFullscreen) {
+        stopWatchOnExitRef.current = true;
+        document.exitFullscreen?.().catch(() => {});
+        document.webkitExitFullscreen?.();
+      } else {
+        exitExpanded();
+        onStopWatching?.();
+      }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -237,14 +257,17 @@ export default function Tile({
   // (ver `appendLocalDrawPoint`), sem esperar o eco da rede.
   useEffect(() => {
     if (!client || !userId || !activeMediaType) return undefined;
+    console.debug('[draw] listener ligado', { userId, activeMediaType });
     function onDrawPoint(e) {
       const msg = e.detail;
+      console.debug('[draw] Tile recebeu evento', { userId, activeMediaType, msg });
       if (!msg || msg.authorId === client.peer?.id) return;
       if (msg.targetId !== userId || msg.mediaType !== activeMediaType) return;
+      console.debug('[draw] passou no filtro, desenhando', { userId, activeMediaType });
       const key = `${msg.authorId}:${msg.strokeId}`;
       let stroke = strokesRef.current.get(key);
       if (!stroke) {
-        stroke = { points: [] };
+        stroke = { points: [], authorId: msg.authorId };
         strokesRef.current.set(key, stroke);
       }
       stroke.points.push({ x: msg.x, y: msg.y, t: performance.now() });
@@ -301,24 +324,26 @@ export default function Tile({
         continue;
       }
       hasActive = true;
-      drawStrokeOnCanvas(ctx, stroke.points, contentRect, now);
+      drawStrokeOnCanvas(ctx, stroke.points, contentRect, now, stroke.authorId);
     }
 
     return hasActive;
   }
 
-  function drawStrokeOnCanvas(ctx, points, rect, now) {
+  function drawStrokeOnCanvas(ctx, points, rect, now, authorId) {
+    const color = userColor(authorId).hex;
+
     if (points.length === 1) {
       const p = points[0];
-      const alpha = Math.max(0, 1 - (now - p.t) / DRAW_FADE_MS);
+      const alpha = Math.max(0, (1 - (now - p.t) / DRAW_FADE_MS) * DRAW_MAX_ALPHA);
       if (alpha <= 0) return;
       ctx.save();
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = DRAW_COLOR;
-      ctx.shadowColor = DRAW_GLOW_COLOR;
-      ctx.shadowBlur = 12;
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 4;
       ctx.beginPath();
-      ctx.arc(rect.left + p.x * rect.width, rect.top + p.y * rect.height, 4, 0, Math.PI * 2);
+      ctx.arc(rect.left + p.x * rect.width, rect.top + p.y * rect.height, 3, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
       return;
@@ -327,16 +352,16 @@ export default function Tile({
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    ctx.strokeStyle = color;
+    ctx.shadowColor = color;
     for (let i = 1; i < points.length; i += 1) {
       const a = points[i - 1];
       const b = points[i];
-      const alpha = Math.max(0, 1 - (now - b.t) / DRAW_FADE_MS);
+      const alpha = Math.max(0, (1 - (now - b.t) / DRAW_FADE_MS) * DRAW_MAX_ALPHA);
       if (alpha <= 0) continue;
       ctx.globalAlpha = alpha;
-      ctx.lineWidth = 2 + alpha * 3;
-      ctx.strokeStyle = DRAW_COLOR;
-      ctx.shadowColor = DRAW_GLOW_COLOR;
-      ctx.shadowBlur = 10 * alpha;
+      ctx.lineWidth = 1.5 + alpha * 1.5;
+      ctx.shadowBlur = 4 * alpha;
       ctx.beginPath();
       ctx.moveTo(rect.left + a.x * rect.width, rect.top + a.y * rect.height);
       ctx.lineTo(rect.left + b.x * rect.width, rect.top + b.y * rect.height);
@@ -356,7 +381,7 @@ export default function Tile({
     const key = `${client.peer.id}:${strokeIdRef.current}`;
     let stroke = strokesRef.current.get(key);
     if (!stroke) {
-      stroke = { points: [] };
+      stroke = { points: [], authorId: client.peer.id };
       strokesRef.current.set(key, stroke);
     }
     stroke.points.push({ x, y, t: performance.now() });
@@ -427,15 +452,15 @@ export default function Tile({
     try {
       if (el.requestFullscreen) {
         await el.requestFullscreen();
-        return;
-      }
-      if (el.webkitRequestFullscreen) {
+      } else if (el.webkitRequestFullscreen) {
         el.webkitRequestFullscreen();
-        return;
       }
     } catch {
       // iOS / browsers que só dão fullscreen em <video> — cai pro overlay local
     }
+    // Precisa marcar `expanded` mesmo quando o Fullscreen API real funciona
+    // (antes só marcava no fallback) — senão o listener de Esc logo abaixo
+    // nunca liga durante fullscreen de verdade, que é o caso comum.
     setExpanded(true);
   }
 

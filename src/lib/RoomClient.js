@@ -365,6 +365,7 @@ export default class RoomClient extends EventTarget {
       this.emit('media-state', Object.fromEntries(this.mediaState));
       this._broadcastRoster();
     } else if (data.type === 'draw-point' || data.type === 'draw-end') {
+      console.debug('[draw] host recebeu de', conn.peer, '— repassando pros outros', data);
       this.emit(data.type, data);
       this._broadcastChat(data, conn);
     }
@@ -548,9 +549,13 @@ export default class RoomClient extends EventTarget {
     const msg = { type: 'draw-point', authorId: this.peer.id, ...payload };
     this.emit('draw-point', msg);
     if (this.isHost) {
+      console.debug('[draw] host broadcast', msg, 'pra', this.memberConns.size, 'membros');
       this._broadcastChat(msg);
     } else if (this.hostConn && this.hostConn.open) {
+      console.debug('[draw] membro enviando pro host', msg);
       this.hostConn.send(msg);
+    } else {
+      console.debug('[draw] NÃO enviou — hostConn indisponível', { hostConn: this.hostConn, open: this.hostConn?.open });
     }
   }
 
