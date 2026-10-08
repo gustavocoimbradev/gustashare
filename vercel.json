@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "buildCommand": "npx vite build --base / && node scripts/prepare-web-dist.js",
+  "//buildCommand": "npx vite build --base / && node scripts/prepare-web-dist.js",
   "outputDirectory": "dist",
   "installCommand": "ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci",
   "headers": [
