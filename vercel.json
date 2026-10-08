@@ -25,11 +25,6 @@
       "source": "/GustaShare-Portable.exe",
       "destination": "https://github.com/gustavocoimbradev/gustashare/releases/latest/download/GustaShare-Setup.exe",
       "permanent": false
-    },
-    {
-      "source": "/carteira-de-trabalho",
-      "destination": "https://www.gov.br/pt-br/servicos/obter-a-carteira-de-trabalho",
-      "permanent": false
     }
   ],
   "rewrites": [
